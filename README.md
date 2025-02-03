@@ -1,6 +1,6 @@
 # Backend code for event-loop
 
-Visit CONTRIBUTING.md for setup-help.
+Visit [`CONTRIBUTING.md`](docs/CONTRIBUTING.md) for setup-help.
 
 ## Regenerating localhost certificates
 
