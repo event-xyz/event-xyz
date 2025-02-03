@@ -1,16 +1,6 @@
-Backend code for event-loop
+# Backend code for event-loop
 
-## Setup
-
-1. Install golang
-2. Run the following to install all dependencies
-
-```sh
-go mod tidy
-
-# starting the backend
-go run .
-```
+Visit CONTRIBUTING.md for setup-help.
 
 ## Regenerating localhost certificates
 
