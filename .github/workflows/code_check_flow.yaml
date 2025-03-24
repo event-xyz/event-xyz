@@ -1,0 +1,48 @@
+name: Code Check workflow
+on:
+  workflow_dispatch:
+
+jobs:
+  code-check:
+    name: Code Check
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      contents: read
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+
+      - name: Install dependencies
+        run: go mod download
+
+      # - name: Golangci-lint
+      #   uses: golangci/golangci-lint-action@v6
+      #   with:
+      #     args: --timeout=3m
+
+      - name: Build code
+        run: CGO=1 GOOS=linux go build
+
+      - name: Run unit tests and coverage
+        run: go test -v -race -cover ./...
+
+      - name: Prepare code coverage report
+        run: |
+          echo "Coverage" > coverage.txt
+          echo '```' >> coverage.txt
+          go tool cover -func=coverage.out >> coverage.txt
+          echo "" >> coverage.txt
+          echo '```' >> coverage.txt
+
+      - name: Publish code coverage report
+        if: "${{ github.event.pull_request.head.repo.full_name == github.repository }}"
+        run: "gh pr comment ${{ github.event.pull_request.number }} --body-file coverage.txt --create-if-none --edit-last"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}

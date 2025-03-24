@@ -1,0 +1,17 @@
+name: Docker image build workflow
+on:
+  workflow_call:
+
+env:
+  IMAGE_TAG: eventloop:latest
+
+jobs:
+  build:
+    name: Build docker image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Build docker image
+        run: docker build -t $IMAGE_TAG .

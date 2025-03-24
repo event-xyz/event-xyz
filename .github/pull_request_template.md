@@ -1,14 +1,12 @@
-## Summary 
+### Which issue(s) does this PR address?
 
-<!-- Briefly describe the changes in this PR. -->  
+### Why do we need this PR?
 
-## ✅ Checklist  
+### What logical changes are present in this PR?
 
-- [ ] Code builds and runs successfully  
-- [ ] Relevant documentation updated (if needed)  
-- [ ] Tests pass (if needed)
-- [ ] Update .env (if needed)
+### How did you test the changes in this PR outside unit tests?
+(Include screenshots, CLI output, etc.)
 
-## Related Issues
+### Are there any breaking changes in this PR?
 
-<!-- - Fixes: #123 -->
+### Is there some additional work to be done later that is NOT covered in this PR?
