@@ -297,6 +297,12 @@ func HandleCheckout(ctx *gin.Context) {
 			ctx.JSON(http.StatusBadRequest, gin.H{"message": "Participant has never checked into the envet. Can't proceed with operation"})
 			return
 		}
+	case database.ErrParticipantLeft:
+		{
+			log.Println("The guy left off -_-!")
+			ctx.JSON(http.StatusBadRequest, gin.H{"message": "Participant has already left the event. Can't proceed with operation"})
+			return
+		}
 	}
 
 	// Respond to the client

@@ -4,6 +4,7 @@ package main
 import (
 	"log"
 	"net/http"
+	"os"
 
 	"github.com/gin-gonic/gin"
 	"github.com/homebrew-ec-foss/eventloop/database"
@@ -11,6 +12,8 @@ import (
 )
 
 func main() {
+
+	isDevBuild := os.Getenv("ELOOP_DEV")
 
 	err := database.InitializeDB()
 	if err != nil {
@@ -47,12 +50,13 @@ func main() {
 	// Endpoints accessed during events
 	// eg: Crossing checkpoints, etc.
 
-	// r.PUT("/checkin", handlers.HandleCheckin)
-	// r.PUT("/checkout", handlers.HandleCheckout)
-	// r.PUT("/checkpoint", handlers.HandleCheckpoint)
+	if isDevBuild == "1" {
+		r.PUT("/checkin", handlers.HandleCheckin)
+		r.PUT("/checkout", handlers.HandleCheckout)
+		r.PUT("/checkpoint", handlers.HandleCheckpoint)
+	}
 
 	// TODO: Handle checking by scanner
-
 	// Router Groups for
 	// 	- volunteers
 	//  - organiser

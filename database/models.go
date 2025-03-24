@@ -79,3 +79,10 @@ type Checkpoints struct {
 	Dinner    bool `json:"dinner"`
 	Breakfast bool `json:"breakfast"`
 }
+
+type ClaimsLogs struct {
+	ID            int64  `gorm:"primaryKey;not null;autoIncrement"`
+	Jwt           string `gorm:"unique"`
+	ParticipantID int64
+	Participant   Participant
+}
