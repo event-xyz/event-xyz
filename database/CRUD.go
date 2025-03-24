@@ -135,7 +135,17 @@ func CreateParticipants(dbParticipants []DBParticipant) error {
 	return nil
 }
 
-func CreateParticipant(participant *Participant, checkpoints *Checkpoints) error {
+func CheckpointsWithDefaults() *Checkpoints {
+	return &Checkpoints{
+		Checkin:   false,
+		Checkout:  false,
+		Snacks:    false,
+		Dinner:    false,
+		Breakfast: false,
+	}
+}
+
+func CreateParticipant(participant *Participant, checkpoints *Checkpoints, uuid string) error {
 	db, err := openDB()
 	if err != nil {
 		return err
@@ -153,6 +163,7 @@ func CreateParticipant(participant *Participant, checkpoints *Checkpoints) error
 		}
 
 		txErr = tx.Create(&DBParticipant{
+			UUID:          uuid,
 			ParticipantID: participant.ID,
 			CheckpointsID: checkpoints.ID,
 		})

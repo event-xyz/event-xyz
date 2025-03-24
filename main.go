@@ -24,6 +24,8 @@ func main() {
 		ctx.String(http.StatusOK, "pong")
 	})
 
+	r.POST("/test/creation", handlers.HandleCreateTest)
+
 	// Generic functions for admin control
 
 	r.GET("/search", func(ctx *gin.Context) {})

@@ -15,6 +15,52 @@ import (
 	"github.com/homebrew-ec-foss/eventloop/database"
 )
 
+func HandleCreateTest(ctx *gin.Context) {
+	file, err := ctx.FormFile("file")
+	if err != nil {
+		ctx.String(http.StatusBadRequest, "Error: No file uploaded")
+		return
+	}
+
+	fileContent, err := file.Open()
+	if err != nil {
+		ctx.String(http.StatusInternalServerError, "Error: Failed to open file")
+		return
+	}
+
+	defer fileContent.Close()
+
+	reader := bufio.NewReader(fileContent)
+	content := bytes.Buffer{}
+
+	_, err = io.Copy(&content, reader)
+	if err != nil {
+		ctx.String(http.StatusInternalServerError, "Error: Failed to read file")
+		return
+	}
+
+	csvReader := csv.NewReader(bytes.NewReader(content.Bytes()))
+	formData, err := csvReader.ReadAll()
+
+	formHeaders := formData[0]
+	formEntriesMap := make([]map[string]string, 0)
+
+	for i := 1; i < len(formData); i++ {
+		entry := make(map[string]string)
+		for j := 0; j < len(formHeaders); j++ {
+			entry[formHeaders[j]] = formData[i][j]
+		}
+		formEntriesMap = append(formEntriesMap, entry)
+	}
+
+	participants, err := ParseParticipants(database.DbGlobal, formEntriesMap)
+	if err != nil {
+		ctx.String(http.StatusInternalServerError, "Error: Failed to write records to database")
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{"data": participants})
+}
+
 // TODO:
 // HandleCreate only handles the incoming file
 // - Create db based on event name

@@ -124,6 +124,7 @@ func ParseParticipants(db *gorm.DB, teamRecords []map[string]string) (*[]databas
 					log.Fatal(err)
 				}
 
+				database.CreateParticipant(&participant, database.CheckpointsWithDefaults(), pid)
 				// dbParticipant := database.DBParticipant{
 				// 	ID:          pid,
 				// 	Participant: participant,
