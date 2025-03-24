@@ -16,6 +16,7 @@ EXTENSION=<.ext>
 ATTACHMENTPATH=<path>
 PORTNO=587
 ```
+Create your app password here: https://myaccount.google.com/u/3/apppasswords
 
 Mails meant for one email can be sent to another email using `-send` flag:
 ```
@@ -24,3 +25,13 @@ Mails meant for one email can be sent to another email using `-send` flag:
 
 The tool takes files with this name format:
 `<email>-<name>-[other-fields].ext`
+
+Format of message file:
+```
+<Message-Head>
+<Message Body>
+```
+You can also send messages through cli flag:
+`./mail -msg '<message-head> <message-body>'`
+
+PSA: All paths to be specified are relative
