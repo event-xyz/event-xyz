@@ -17,6 +17,7 @@ import (
 var (
 	sendFlag = flag.String("send", "", "Send specific files (format: 'search-email recipient-email')")
 	extFlag  = flag.String("ext", "", "What extension files to send")
+	msgFlag  = flag.String("msg", "", "What message you would like to send (format: 'heading body')")
 )
 
 func main() {
@@ -77,9 +78,10 @@ func getConfig() (Config, error) {
 		username:       os.Getenv("USERNAME"),
 		password:       os.Getenv("PASSWORD"),
 		host:           os.Getenv("HOST"),
-		unsentFile:     os.Getenv("LOGFILE"),
+		unsentFile:     os.Getenv("UNSENTLOG"),
 		attachmentPath: os.Getenv("ATTACHMENTPATH"),
 		extension:      os.Getenv("EXTENSION"),
+		messagePath:    os.Getenv("MESSAGEPATH"),
 		portno:         portno,
 		sendSpecific:   false,
 		checkExtension: false,
@@ -100,12 +102,67 @@ func getConfig() (Config, error) {
 		config.extension = *extFlag
 	}
 
+	if *msgFlag != "" {
+		messageDetails := strings.Split(*msgFlag, "")
+		if len(messageDetails) != 2 {
+			return Config{}, fmt.Errorf("use format: -msg 'message-head message-body'")
+		}
+
+		config.messageHead = messageDetails[0]
+		config.messageBody = messageDetails[1]
+	} else {
+		if config.messagePath == "" {
+			return Config{}, fmt.Errorf("no message or message file path provided")
+		}
+		messageHead, messageBody, err := parseMessage(config.messagePath)
+		if err != nil {
+			return Config{}, err
+		}
+
+		config.messageHead = *messageHead
+		config.messageBody = *messageBody
+	}
+
 	if config.username == "" || config.password == "" || config.unsentFile == "" ||
 		config.attachmentPath == "" || portnoString == "" {
 		return Config{}, fmt.Errorf("not all env variables are filled")
 	}
 
 	return config, nil
+}
+
+func parseMessage(messagePath string) (*string, *string, error) {
+	splitMessageDetails := func(messageDetails []string) (*string, *string) {
+		messageHead := messageDetails[0]
+		messageBody := strings.Join(messageDetails, "\n")
+
+		return &messageHead, &messageBody
+	}
+
+	if *msgFlag != "" {
+		messageDetails := strings.Split(*msgFlag, "")
+		if len(messageDetails) < 2 {
+			return nil, nil, fmt.Errorf("use format: -msg 'message-head message-body'")
+		}
+
+		messageHead, messageBody := splitMessageDetails(messageDetails)
+		return messageHead, messageBody, nil
+	}
+
+	bytes, err := os.ReadFile(messagePath)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to open message file: %v", err)
+	}
+
+	message := string(bytes[:])
+	messageDetails := strings.Split(message, "\n")
+
+	if len(messageDetails) < 2 {
+		return nil, nil, fmt.Errorf("wrong format for message file, check README")
+	}
+
+	messageHead, messageBody := splitMessageDetails(messageDetails)
+	return messageHead, messageBody, nil
 }
 
 func extractEmailFromFileName(fileName string) (string, string) {
@@ -168,6 +225,7 @@ func sendMailTo(sender gomail.SendCloser, config *Config) error {
 	return nil
 }
 
+// TODO: Change name to team name once changes pushed on eventloop
 func sendMailsAll(sender gomail.SendCloser, config *Config) error {
 	var currentEmail string
 	var currentAttachments []string
@@ -240,9 +298,9 @@ func sendMail(sender gomail.SendCloser, receiver Receiver, config *Config, attac
 	// Set email headers
 	msg.SetHeader("From", config.username)
 	msg.SetHeader("To", receiver.email)
-	msg.SetHeader("Subject", "Attachments")
+	msg.SetHeader("Subject", config.messageHead)
 
-	msg.SetBody("text/plain", fmt.Sprintf("Hello %s,\nAttachments:\n", receiver.name))
+	msg.SetBody("text/plain", config.messageBody)
 
 	for _, attachment := range attachmentPaths {
 		msg.Attach(attachment)

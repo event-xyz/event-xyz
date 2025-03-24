@@ -5,12 +5,15 @@ type Config struct {
 	unsentFile     string // file to log all emails we failed to send emails to
 	attachmentPath string
 	extension      string
+	messagePath    string
 	portno         int
 
 	// sender info
-	host     string
-	username string
-	password string
+	host        string
+	username    string
+	password    string
+	messageHead string
+	messageBody string
 
 	// flags
 	checkExtension bool
