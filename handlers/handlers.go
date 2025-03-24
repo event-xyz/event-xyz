@@ -49,7 +49,6 @@ func HandleCreate(ctx *gin.Context) {
 	// check for validation of opinionated headers and
 	// dynamic headers
 	formHeaders := formData[0]
-
 	formEntriesMap := make([]map[string]string, 0)
 
 	// Converting csv data to a slice of maps (slice has several rows of records, where each row is a map)
@@ -64,21 +63,21 @@ func HandleCreate(ctx *gin.Context) {
 	}
 
 	// Parsing the csv to a slice of Participants struct
-	participants, err := ParseParticipants(formEntriesMap)
+	participants, err := ParseParticipants(database.DbGlobal, formEntriesMap)
 	if err != nil {
 		ctx.String(http.StatusInternalServerError, "Error: Failed to write records to the database")
 	}
 
 	// Converting Participant structs to DBPartictipants
 	// Performing JWT and QR generation and embedding 'Checkpoints' struct
-	dbParticipants, err := CreateDBParticipants(participants)
-	log.Println(dbParticipants)
+	// dbParticipants, err := CreateDBParticipants(participants)
+	// log.Println(dbParticipants)
 
 	// Writing records to DB
-	err = database.CreateParticipants(dbParticipants)
-	if err != nil {
-		log.Fatal(err)
-	}
+	// err = database.CreateParticipants(dbParticipants)
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
 
 	ctx.JSON(http.StatusOK, gin.H{"data": participants})
 }
@@ -116,7 +115,7 @@ func HandleCheckpoint(ctx *gin.Context) {
 	}
 	log.Println("JWT claims:", jwtClaims)
 
-	dbParticipant, checkpointCleared, err := database.ParticipantCheckpoint(jwtClaims["UUID"].(string), checkpointName)
+	dbParticipant, _, _, checkpointCleared, err := database.ParticipantCheckpoint(jwtClaims["UUID"].(string), checkpointName)
 	log.Println(dbParticipant, checkpointCleared, err)
 
 	switch err {
@@ -176,7 +175,7 @@ func HandleCheckin(ctx *gin.Context) {
 	}
 
 	// Querying DB for participant and updating with entry
-	dbParticipant, checkin, err := database.ParticipantEntry(jwtClaims["UUID"].(string))
+	dbParticipant, _, _, checkin, err := database.ParticipantEntry(jwtClaims["UUID"].(string))
 
 	switch err {
 	case database.ErrDbOpenFailure:
@@ -232,7 +231,7 @@ func HandleCheckout(ctx *gin.Context) {
 	log.Println(jwtClaims)
 
 	// Querying DB for participant and updating with entry
-	dbParticipant, checkout, err := database.ParticipantExit(jwtClaims["UUID"].(string))
+	dbParticipant, _, _, checkout, err := database.ParticipantExit(jwtClaims["UUID"].(string))
 
 	switch err {
 	case database.ErrDbOpenFailure:

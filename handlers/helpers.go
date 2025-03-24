@@ -14,6 +14,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/homebrew-ec-foss/eventloop/database"
+	"gorm.io/gorm"
 )
 
 func CorsMiddleware() gin.HandlerFunc {
@@ -80,11 +81,23 @@ func AuthenticationMiddleware(userRole string) gin.HandlerFunc {
 }
 
 // Parsing a slice of maps(rows of records) from csv data to a slice of participant structs
-func ParseParticipants(teamRecords []map[string]string) ([]database.Participant, error) {
+func ParseParticipants(db *gorm.DB, teamRecords []map[string]string) (*[]database.Participant, error) {
 	participants := []database.Participant{}
 
 	for i := 0; i < len(teamRecords); i++ {
 		record := teamRecords[i]
+		teamLeaderEmail := record["Email"]
+
+		team := database.Team{
+			Team:  record["Team Name"],
+			Email: teamLeaderEmail,
+		}
+		err := database.CreateTeam(&team)
+		if err != nil {
+			log.Fatalln("failed to create a team", err)
+			continue
+		}
+
 		for j := 1; j <= 5; j++ {
 			participantName := record[fmt.Sprintf("Name %d", j)]
 			if participantName == "" {
@@ -95,50 +108,70 @@ func ParseParticipants(teamRecords []map[string]string) ([]database.Participant,
 					return nil, err
 				}
 
-				participants = append(participants, database.Participant{
+				participant := database.Participant{
+					TeamID:    team.ID,
 					Name:      strings.TrimSpace(record[fmt.Sprintf("Name %d", j)]),
-					Email:     strings.TrimSpace(record[fmt.Sprintf("Email %d", j)]),
 					Phone:     int64(ph),
-					College:   strings.TrimSpace(record[fmt.Sprintf("College %d", j)]),
 					Branch:    strings.TrimSpace(record[fmt.Sprintf("Branch %d", j)]),
 					PesHostel: strings.TrimSpace(record[fmt.Sprintf("PES Hostel %d", j)]),
-					Team:      strings.TrimSpace(record["Team Name"]),
-					Theme:     strings.TrimSpace(record["Theme"]),
-				})
+				}
+
+				pid, _ := GenerateUUID(participant)
+				signedString, _ := GenerateAuthoToken(participant, pid)
+
+				_, err = GenerateQR(signedString, participant.Name, teamLeaderEmail, pid)
+				if err != nil {
+					log.Fatal(err)
+				}
+
+				// dbParticipant := database.DBParticipant{
+				// 	ID:          pid,
+				// 	Participant: participant,
+				// 	Checkpoints: database.Checkpoints{
+				// 		Checkin:   false,
+				// 		Checkout:  false,
+				// 		Snacks:    false,
+				// 		Dinner:    false,
+				// 		Breakfast: false,
+				// 	},
+				// }
+
+				// dbParticipants = append(dbParticipants, dbParticipant)
+				participants = append(participants, participant)
 			}
 		}
 	}
 
-	return participants, nil
+	return &participants, nil
 }
 
-func CreateDBParticipants(participantsRec []database.Participant) ([]database.DBParticipant, error) {
-	var participantPointers []database.DBParticipant
-
-	for _, p := range participantsRec {
-		pid, _ := GenerateUUID(p)
-		signedString, _ := GenerateAuthoToken(p, pid)
-
-		_, err := GenerateQR(signedString, p.Name, p.Email, pid)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		participantPointers = append(participantPointers, database.DBParticipant{
-			ID:          pid,
-			Participant: p,
-			Checkpoints: database.Checkpoints{
-				Checkin:   false,
-				Checkout:  false,
-				Snacks:    false,
-				Dinner:    false,
-				Breakfast: false,
-			},
-		})
-	}
-
-	return participantPointers, nil
-}
+// func CreateDBParticipants(participantsRec []database.Participant) ([]database.DBParticipant, error) {
+// 	var participantPointers []database.DBParticipant
+//
+// 	for _, p := range participantsRec {
+// 		pid, _ := GenerateUUID(p)
+// 		signedString, _ := GenerateAuthoToken(p, pid)
+//
+// 		_, err := GenerateQR(signedString, p.Name, p.Email, pid)
+// 		if err != nil {
+// 			log.Fatal(err)
+// 		}
+//
+// 		participantPointers = append(participantPointers, database.DBParticipant{
+// 			ID:          pid,
+// 			Participant: p,
+// 			Checkpoints: database.Checkpoints{
+// 				Checkin:   false,
+// 				Checkout:  false,
+// 				Snacks:    false,
+// 				Dinner:    false,
+// 				Breakfast: false,
+// 			},
+// 		})
+// 	}
+//
+// 	return participantPointers, nil
+// }
 
 func saveFile(file *multipart.FileHeader) error {
 	src, err := file.Open()

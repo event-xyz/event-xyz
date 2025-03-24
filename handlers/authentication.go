@@ -15,11 +15,9 @@ import (
 
 // Claims for JWT
 type JWTClaims struct {
-	UUID    string `json:"UUID"`
-	Name    string `json:"name"`
-	College string `json:"college"`
-	Phone   string `json:"phone"`
-	Email   string `json:"email"`
+	UUID  string `json:"UUID"`
+	Name  string `json:"name"`
+	Phone string `json:"phone"`
 	// probably add team id here
 	jwt.RegisteredClaims
 }
@@ -56,7 +54,7 @@ func JWTAuthCheck(rawtoken string) (bool, *jwt.MapClaims) {
 }
 
 func GenerateUUID(user_record database.Participant) (string, error) {
-	unique_string := fmt.Sprintf("%s-%s-%s", user_record.Name, user_record.College, user_record.Team)
+	unique_string := fmt.Sprintf("%s-%s-%s", user_record.Name)
 
 	id := uuid.NewSHA1(uuid.NameSpaceURL, []byte(unique_string))
 
@@ -76,9 +74,7 @@ func GenerateAuthoToken(user_record database.Participant, p_uuid string) (string
 		// add a extra field for UUID
 		p_uuid,
 		user_record.Name,
-		user_record.College,
 		strconv.Itoa(int(user_record.Phone)),
-		user_record.Email,
 		jwt.RegisteredClaims{
 			Issuer: "userservices",
 		},
@@ -117,7 +113,7 @@ func GetClaimsInfo(rawtoken string) (map[string]interface{}, error) {
 }
 
 // TODO: cleanup arguments for GenerateQR
-func GenerateQR(signedString, participantName string, participantEmail string, uuid string) ([]byte, error) {
+func GenerateQR(signedString, participantName string, leaderEmail string, uuid string) ([]byte, error) {
 	var png []byte
 	png, err := qrcode.Encode(signedString, qrcode.Low, 256)
 	if err != nil {
@@ -128,7 +124,7 @@ func GenerateQR(signedString, participantName string, participantEmail string, u
 		log.Println(err)
 	}
 
-	err = qrcode.WriteFile(signedString, qrcode.Medium, 256, fmt.Sprintf("../test-data/qr-png/%s-%s-%s.png", participantEmail, participantName, uuid))
+	err = qrcode.WriteFile(signedString, qrcode.Medium, 256, fmt.Sprintf("../test-data/qr-png/%s-%s-%s.png", leaderEmail, participantName, uuid))
 	if err != nil {
 		return nil, err
 	}

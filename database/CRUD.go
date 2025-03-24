@@ -11,7 +11,7 @@ import (
 )
 
 var (
-	dbGlobal  *gorm.DB
+	DbGlobal  *gorm.DB
 	errGlobal error
 )
 
@@ -37,17 +37,51 @@ var (
 
 // Open and return db access struct
 func openDB() (*gorm.DB, error) {
-	if dbGlobal == nil {
-		dbGlobal, errGlobal = gorm.Open(sqlite.Open("event.db"), &gorm.Config{})
+	if DbGlobal == nil {
+		DbGlobal, errGlobal = gorm.Open(sqlite.Open("event.db"), &gorm.Config{})
 		if errGlobal != nil {
 			log.Println(errGlobal)
 			return nil, errGlobal
 		}
 
-		dbGlobal.AutoMigrate(&DBParticipant{}, &DBAuthoriesedUsers{})
+		err := DbGlobal.AutoMigrate(&Checkpoints{})
+		if err != nil {
+			log.Fatalln("Failed to migrate db Checkpoints")
+		}
+
+		err = DbGlobal.AutoMigrate(&Team{})
+		if err != nil {
+			log.Fatalln("Failed to migrate db Team")
+		}
+
+		err = DbGlobal.AutoMigrate(&Participant{})
+		if err != nil {
+			log.Fatalln("Failed to migrate db Participant")
+		}
+
+		err = DbGlobal.AutoMigrate(&DBParticipant{})
+		if err != nil {
+			log.Fatalln("Failed to migrate db DBParticipant")
+		}
+
+		err = DbGlobal.AutoMigrate(&DBAuthoriesedUsers{})
+		if err != nil {
+			log.Fatalln("Failed to migrate db DBAuthoriesedUsers")
+		}
+	}
+	return DbGlobal, nil
+}
+
+func CreateTeam(team *Team) error {
+	db, err := openDB()
+	if err != nil {
+		return err
 	}
 
-	return dbGlobal, nil
+	db.Create(&team)
+	log.Printf("Creating team %s with id %d", team.Team, team.ID)
+
+	return nil
 }
 
 // Create records for all participants parsed from the csv
@@ -62,6 +96,34 @@ func CreateParticipants(dbParticipants []DBParticipant) error {
 	db.Create(dbParticipants)
 
 	return nil
+}
+
+func CreateParticipant(participant *Participant, checkpoints *Checkpoints) error {
+	db, err := openDB()
+	if err != nil {
+		return err
+	}
+
+	err = db.Transaction(func(tx *gorm.DB) error {
+		txErr := tx.Create(&checkpoints)
+		if txErr.Error != nil {
+			return txErr.Error
+		}
+
+		txErr = tx.Create(&participant)
+		if txErr.Error != nil {
+			return txErr.Error
+		}
+
+		txErr = tx.Create(&DBParticipant{
+			ParticipantID: participant.ID,
+			CheckpointsID: checkpoints.ID,
+		})
+
+		return nil
+	})
+
+	return err
 }
 
 func CreateAuthorisedUsersDB() error {
@@ -194,22 +256,30 @@ func JWTFetchParticipant(jwt string) (*DBParticipant, error) {
 	return &dbParticipant, nil
 }
 
-func FetchParticipant(name string, phone string) (*DBParticipant, error) {
+func FetchParticipant(name string, phone string) (*Participant, error) {
 	db, err := openDB()
 	if err != nil {
 		return nil, ErrDbOpenFailure
 	}
+	var participant Participant
 
-	var dbParticipant DBParticipant
-	_ = db.First(&dbParticipant, "name = ? and phone = ?", name, phone)
+	err = db.Transaction(func(tx *gorm.DB) error {
 
-	log.Println(dbParticipant)
+		_ = tx.First(&participant, "name = ? and phone = ?", name, phone)
+		log.Println(participant)
 
-	if dbParticipant.Participant.Name == "" {
-		return nil, ErrDbMissingRecord
+		if participant.Name == "" {
+			return ErrDbMissingRecord
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
 	}
+	return &participant, err
 
-	return &dbParticipant, nil
 }
 
 // Update DB with the participant entry checkpoint
@@ -218,34 +288,49 @@ func FetchParticipant(name string, phone string) (*DBParticipant, error) {
 // - Pointer to participant
 // - checkin : true if not checked in
 // - error
-func ParticipantEntry(p_uuid string) (*DBParticipant, bool, error) {
+func ParticipantEntry(p_uuid string) (*DBParticipant, *Participant, *Checkpoints, bool, error) {
 	db, err := openDB()
 	if err != nil {
-		return nil, false, ErrDbOpenFailure
+		return nil, nil, nil, false, ErrDbOpenFailure
 	}
 
 	var dbParticipant DBParticipant
-	_ = db.First(&dbParticipant, "id = ?", p_uuid)
-	log.Println(dbParticipant.Participant)
+	var participant Participant
+	var checkpoint Checkpoints
+	flag := true
 
-	if dbParticipant.Participant.Name == "" {
-		// FIX:
-		// Returns a pointer to an empty struct
-		return nil, false, ErrDbMissingRecord
-	}
+	err = db.Transaction(func(tx *gorm.DB) error {
+		_ = db.First(&dbParticipant, "uuid = ?", p_uuid)
+		log.Println(dbParticipant)
 
-	if dbParticipant.Checkpoints.Checkin && dbParticipant.Checkpoints.Checkout {
-		return nil, false, ErrParticipantLeft
-	}
+		_ = db.First(&participant, "id = ?", dbParticipant.ParticipantID)
+		log.Println(participant)
 
-	if !dbParticipant.Checkpoints.Checkin {
-		dbParticipant.Checkpoints.Entry_time = time.Now()
-		dbParticipant.Checkpoints.Checkin = true
-		db.Save(&dbParticipant)
-		return &dbParticipant, true, nil
-	}
+		_ = db.First(&checkpoint, "id = ?", dbParticipant.CheckpointsID)
+		log.Println(checkpoint)
 
-	return &dbParticipant, false, nil
+		if participant.Name == "" {
+			flag = false
+			return ErrDbMissingRecord
+		}
+
+		if checkpoint.Checkin && checkpoint.Checkout {
+			flag = false
+			return ErrParticipantLeft
+		}
+
+		if !checkpoint.Checkin {
+			checkpoint.Entry_time = time.Now()
+			checkpoint.Checkin = true
+			flag = true
+			db.Save(&checkpoint)
+			return nil
+		}
+
+		return nil
+	})
+
+	return &dbParticipant, &participant, &checkpoint, flag, nil
 }
 
 // Update DB with the participant exit checkpoint
@@ -255,96 +340,140 @@ func ParticipantEntry(p_uuid string) (*DBParticipant, bool, error) {
 //   - checkin : true if sucessfulyl checked in and
 //     false if alreayd checked in
 //   - error
-func ParticipantExit(p_uuid string) (*DBParticipant, bool, error) {
+func ParticipantExit(p_uuid string) (*DBParticipant, *Participant, *Checkpoints, bool, error) {
 	db, err := openDB()
 	if err != nil {
-		return nil, false, ErrDbOpenFailure
+		return nil, nil, nil, false, ErrDbOpenFailure
 	}
 
-	var dbParticipants DBParticipant
+	var dbParticipant DBParticipant
+	var participant Participant
+	var checkpoint Checkpoints
+	flag := true
 
-	_ = db.First(&dbParticipants, "id = ?", p_uuid)
+	err = db.Transaction(func(tx *gorm.DB) error {
+		txErr := db.First(&dbParticipant, "uuid = ?", p_uuid)
+		if txErr.Error != nil {
+			return txErr.Error
+		}
 
-	// Extra check if there has been some tampered entry
-	// in the db
-	if dbParticipants.Participant.Name == "" {
-		return nil, false, ErrDbMissingRecord
-	}
+		txErr = db.First(&participant, "id = ? ", dbParticipant.ParticipantID)
+		if txErr.Error != nil {
+			return txErr.Error
+		}
 
-	// Participant MUST have checked in
-	// for the checkout proceedure to be valid
-	if !dbParticipants.Checkpoints.Checkin {
-		return nil, false, ErrParticipantAbsent
-	}
+		txErr = db.First(&checkpoint, "id = ? ", dbParticipant.CheckpointsID)
+		if txErr.Error != nil {
+			return txErr.Error
+		}
 
-	if !dbParticipants.Checkpoints.Checkout {
-		dbParticipants.Checkpoints.Checkout = true
-		dbParticipants.Checkpoints.Exit_time = time.Now()
-		db.Save(&dbParticipants)
-		return &dbParticipants, true, nil
-	}
+		if participant.Name == "" {
+			return ErrDbMissingRecord
+		}
 
-	return &dbParticipants, false, nil
+		if !checkpoint.Checkin {
+			return ErrParticipantAbsent
+		}
+
+		if !checkpoint.Checkout {
+			checkpoint.Checkin = true
+			checkpoint.Exit_time = time.Now()
+			db.Save(checkpoint)
+			return nil
+		}
+
+		return nil
+	})
+
+	return &dbParticipant, &participant, &checkpoint, flag, nil
 }
 
-func ParticipantCheckpoint(p_uuid string, checkpointName string) (*DBParticipant, bool, error) {
+func ParticipantCheckpoint(p_uuid string, checkpointName string) (*DBParticipant, *Participant, *Checkpoints, bool, error) {
 	db, err := openDB()
 	if err != nil {
-		return nil, false, ErrDbOpenFailure
+		return nil, nil, nil, false, ErrDbOpenFailure
 	}
 
-	var dbParticipants DBParticipant
+	var dbParticipant DBParticipant
+	var participant Participant
+	var checkpoint Checkpoints
+	flag := true
 
-	_ = db.First(&dbParticipants, "id = ?", p_uuid)
+	err = db.Transaction(func(tx *gorm.DB) error {
+		txErr := db.First(&dbParticipant, "uuid = ?", p_uuid)
+		if txErr.Error != nil {
+			return txErr.Error
+		}
+
+		txErr = db.First(&participant, "id = ?", dbParticipant.ParticipantID)
+		if txErr.Error != nil {
+			return txErr.Error
+		}
+
+		txErr = db.First(&checkpoint, "id = ?", dbParticipant.CheckpointsID)
+		if txErr.Error != nil {
+			return txErr.Error
+		}
+
+		if participant.Name == "" {
+			flag = false
+			return ErrDbMissingRecord
+		}
+
+		if !checkpoint.Checkin {
+			flag = false
+			return ErrParticipantAbsent
+		}
+
+		if checkpoint.Checkin && checkpoint.Checkout {
+			flag = false
+			return ErrParticipantLeft
+		}
+
+		// FIX: Refractor
+		switch checkpointName {
+		case "Breakfast":
+			{
+				if checkpoint.Breakfast {
+					break
+				}
+				checkpoint.Breakfast = true
+				db.Save(&checkpoint)
+				flag = true
+				return nil
+			}
+		case "Dinner":
+			{
+				if checkpoint.Dinner {
+					break
+				}
+				checkpoint.Dinner = true
+				db.Save(&checkpoint)
+				flag = true
+				return nil
+			}
+		case "Snacks":
+			{
+				if checkpoint.Snacks {
+					break
+				}
+				checkpoint.Snacks = true
+				db.Save(&checkpoint)
+				flag = true
+				return nil
+			}
+		default:
+			{
+				flag = false
+				return ErrIncorrectField
+			}
+		}
+
+		return nil
+	})
 
 	// Check if participant is in the db
-	if dbParticipants.Participant.Name == "" {
-		return nil, false, ErrDbMissingRecord
-	}
-
-	if !dbParticipants.Checkpoints.Checkin {
-		return nil, false, ErrParticipantAbsent
-	}
-
-	if dbParticipants.Checkpoints.Checkin && dbParticipants.Checkpoints.Checkout {
-		return nil, false, ErrParticipantLeft
-	}
-
-	// FIX: Refractor
-	switch checkpointName {
-	case "Breakfast":
-		{
-			if dbParticipants.Checkpoints.Breakfast {
-				break
-			}
-			dbParticipants.Checkpoints.Breakfast = true
-			db.Save(&dbParticipants)
-			return &dbParticipants, true, nil
-		}
-	case "Dinner":
-		{
-			if dbParticipants.Checkpoints.Dinner {
-				break
-			}
-			dbParticipants.Checkpoints.Dinner = true
-			db.Save(&dbParticipants)
-			return &dbParticipants, true, nil
-		}
-	case "Snacks":
-		{
-			if dbParticipants.Checkpoints.Snacks {
-				break
-			}
-			dbParticipants.Checkpoints.Snacks = true
-			db.Save(&dbParticipants)
-			return &dbParticipants, true, nil
-		}
-	default:
-		{
-			return nil, false, ErrIncorrectField
-		}
-	}
 
 	// Participant has already opted for the option
-	return &dbParticipants, false, nil
+	return &dbParticipant, &participant, &checkpoint, flag, nil
 }

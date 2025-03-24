@@ -5,9 +5,11 @@ import "time"
 // This struct is another table to hold team data
 type Team struct {
 	// TODO: update by using a UUID
-	ID    string `gorm:"primaryKey"`
-	Team  string
-	Theme string
+	ID    int64  `gorm:"primaryKey;not null;autoIncrement"`
+	Team  string `gorm:"not null"`
+	Email string `gorm:"not null"`
+
+	Participant []Participant
 }
 
 const (
@@ -24,9 +26,10 @@ const (
 //   - organizers
 //   - volunteers
 type DBAuthoriesedUsers struct {
-	SUB           string `gorm:"primaryKey"`
-	VerifiedEmail string `gorm:"VerifiedEmail"`
-	UserRole      string `gorm:"UserRole"`
+	ID            int64 `gorm:"primaryKey;not null;autoIncrement"`
+	SUB           string
+	VerifiedEmail string
+	UserRole      string
 
 	// TOOD:
 	// event name they belong to
@@ -36,29 +39,32 @@ type DBAuthoriesedUsers struct {
 type DBParticipant struct {
 	// ID is the generated JWT auth token
 	// TODO: Change to a UUID instead of JWT
-	ID          string      `gorm:"primaryKey"`
-	Participant Participant `gorm:"embedded"`
-	Checkpoints Checkpoints `gorm:"embedded"`
+	ID   int64  `gorm:"primaryKey;not null;autoIncrement"`
+	UUID string `gorm:"unique"`
+
+	// foreign keys
+	ParticipantID int64
+	CheckpointsID int64
 }
 
 // This struct stores all fields parsed from the csv
 type Participant struct {
 	// TODO: Seperate to a separate
 	// team table
-	Team  string `json:"team"`
-	Theme string `json:"theme"`
-
+	ID        int64  `gorm:"primaryKey;not null;autoIncrement"`
 	Name      string `json:"name"`
-	Email     string `json:"email"`
 	Phone     int64  `json:"phone"`
-	College   string `json:"college"`
 	Branch    string `json:"branch"`
 	PesHostel string `json:"pesHostel"`
+
+	// foreign keys
+	TeamID int64
 }
 
 // This struct stores all event checkpoints
 type Checkpoints struct {
 	// Other Participant Parameters
+	ID         int64     `gorm:"primaryKey;not null;autoIncrement"`
 	Entry_time time.Time `json:"entry_time"`
 	Checkin    bool      `json:"checkin"`
 	Checkout   bool      `json:"checkout"`
