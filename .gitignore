@@ -3,8 +3,10 @@
 *.key
 *.png
 *.csv
+*.txt
 !test.csv
 tmp/
 .env
 event-loop-backend
 eventloop
+eventloop-bin

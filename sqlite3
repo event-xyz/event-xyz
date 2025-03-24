@@ -1,1 +1,0 @@
-SELECT claims_log.jwt, participants.name, participants.id FROM participants INNER JOIN claims_logs ON claims_logs.participant_id = participants.id WHERE participants.id = 1 event.db

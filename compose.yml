@@ -1,17 +1,13 @@
 services:
-    web:
-        build: ./event-loop-frontend
-        ports:
-            - "3000:3000"
-        networks:
-            - backend
-
-    backend:
-        build: ./event-loop-backend
-        ports:
-            - "8080:8080"
-        networks:
-            - backend
-
-networks:
-    backend:
+  eventloop:
+    image: anirudhsudhir/eventloop:0.0.1-beta
+    ports:
+      - "8080:8080"
+    volumes:
+      - /home/sudhir/eventloop:/app/data
+  watchtower:
+    image: containrrr/watchtower
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /home/sudhir/.docker/config.json:/config.json
+    command: --interval 30

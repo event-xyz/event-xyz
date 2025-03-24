@@ -29,3 +29,11 @@ func GenerateQR(signedString string, i int) ([]byte, error) {
 	// -- snip --
 }
 ```
+
+
+## Deployment
+
+- Run `docker compose up` in the directory containing `compose.yml`, with the
+application configuration in `./data`
+- Move nginx.conf to `/etc/nginx/nginx.conf`
+- Point domain to server and run certbot to generate SSL certificates
