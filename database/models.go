@@ -44,7 +44,9 @@ type DBParticipant struct {
 
 	// foreign keys
 	ParticipantID int64
+	Participant   Participant
 	CheckpointsID int64
+	Checkpoints   Checkpoints
 }
 
 // This struct stores all fields parsed from the csv
@@ -59,6 +61,7 @@ type Participant struct {
 
 	// foreign keys
 	TeamID int64
+	Team   Team
 }
 
 // This struct stores all event checkpoints

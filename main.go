@@ -6,10 +6,17 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/homebrew-ec-foss/eventloop/database"
 	"github.com/homebrew-ec-foss/eventloop/handlers"
 )
 
 func main() {
+
+	err := database.InitializeDB()
+	if err != nil {
+		log.Fatalln("[MAIN] failed to run InitializeDB")
+	}
+
 	r := gin.Default()
 	r.Use(handlers.CorsMiddleware())
 
@@ -80,7 +87,7 @@ func main() {
 		admin.PUT("/checkpoint", handlers.HandleCheckpoint)
 	}
 
-	err := r.Run(":8080")
+	err = r.Run(":8080")
 	if err != nil {
 		log.Fatal(err)
 	}

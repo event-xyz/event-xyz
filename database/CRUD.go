@@ -35,6 +35,43 @@ var (
 	ErrNoAccess     = fmt.Errorf("incoming request was authoriesed but has no access to the endpoint")
 )
 
+func InitializeDB() error {
+	if DbGlobal == nil {
+		DbGlobal, errGlobal = gorm.Open(sqlite.Open("event.db"), &gorm.Config{})
+		if errGlobal != nil {
+			log.Println(errGlobal)
+			return errGlobal
+		}
+
+		err := DbGlobal.AutoMigrate(&Checkpoints{})
+		if err != nil {
+			log.Fatalln("Failed to migrate db Checkpoints")
+		}
+
+		err = DbGlobal.AutoMigrate(&Team{})
+		if err != nil {
+			log.Fatalln("Failed to migrate db Team")
+		}
+
+		err = DbGlobal.AutoMigrate(&Participant{})
+		if err != nil {
+			log.Fatalln("Failed to migrate db Participant")
+		}
+
+		err = DbGlobal.AutoMigrate(&DBParticipant{})
+		if err != nil {
+			log.Fatalln("Failed to migrate db DBParticipant")
+		}
+
+		err = DbGlobal.AutoMigrate(&DBAuthoriesedUsers{})
+		if err != nil {
+			log.Fatalln("Failed to migrate db DBAuthoriesedUsers")
+		}
+	}
+	log.Println("[CRUD] InitializeDB and Migraated tables sucessfully")
+	return nil
+}
+
 // Open and return db access struct
 func openDB() (*gorm.DB, error) {
 	if DbGlobal == nil {
