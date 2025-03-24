@@ -54,7 +54,7 @@ func JWTAuthCheck(rawtoken string) (bool, *jwt.MapClaims) {
 }
 
 func GenerateUUID(user_record database.Participant) (string, error) {
-	unique_string := fmt.Sprintf("%s-%s-%s", user_record.Name)
+	unique_string := fmt.Sprintf("%s", user_record.Name)
 
 	id := uuid.NewSHA1(uuid.NameSpaceURL, []byte(unique_string))
 

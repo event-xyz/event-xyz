@@ -1,0 +1,12 @@
+name: Push to main workflow
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  code-check:
+    uses: ./.github/workflows/code-check-flow.yaml
+  build:
+    needs: code-check
+    uses: ./.github/workflows/docker-image-build-flow.yaml

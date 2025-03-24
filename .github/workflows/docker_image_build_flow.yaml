@@ -1,6 +1,5 @@
 name: Docker image build workflow
-on:
-  workflow_call:
+on: workflow_call
 
 env:
   IMAGE_TAG: eventloop:latest

@@ -1,6 +1,12 @@
 name: Code Check workflow
-on:
-  workflow_dispatch:
+on: 
+  workflow_call:
+    inputs:
+      publish-coverage-report:
+        description: 'Controls whether to publish the coverage report to the PR'
+        required: false
+        default: false
+        type: boolean
 
 jobs:
   code-check:
@@ -30,7 +36,7 @@ jobs:
         run: CGO=1 GOOS=linux go build
 
       - name: Run unit tests and coverage
-        run: go test -v -race -cover ./...
+        run: go test -race -v -cover -coverprofile=coverage.out ./...
 
       - name: Prepare code coverage report
         run: |
@@ -41,7 +47,7 @@ jobs:
           echo '```' >> coverage.txt
 
       - name: Publish code coverage report
-        if: "${{ github.event.pull_request.head.repo.full_name == github.repository }}"
+        if: "${{ inputs.publish-coverage-report && (github.event.pull_request.head.repo.full_name == github.repository) }}"
         run: "gh pr comment ${{ github.event.pull_request.number }} --body-file coverage.txt --create-if-none --edit-last"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

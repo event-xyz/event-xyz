@@ -6,7 +6,7 @@ on:
       - '*'
 
 env:
-  IMAGE_TAG: eventloop:latest
+  IMAGE_TAG: eventloop:${{ github.ref_name }}
 
 jobs:
   tag_release:
@@ -24,6 +24,5 @@ jobs:
       - name: Build and push
         uses: docker/build-push-action@v6
         with:
-          platforms: linux/amd64,linux/arm64
           push: true
-          tags: user/app:latest ${{ secrets.REGISTRY_PATH }}/$IMAGE_PATH
+          tags: ${{ secrets.REGISTRY_PATH }}/${{ env.IMAGE_TAG }}

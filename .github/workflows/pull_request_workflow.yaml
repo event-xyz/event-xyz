@@ -1,12 +1,16 @@
 name: Pull request check workflow
 
 on:
+  pull_request:
   push:
     branches:
       - main
+
 jobs:
   code-check:
     uses: ./.github/workflows/code_check_flow.yaml
+    with:
+      publish-coverage-report: true
   build:
     needs: code-check
     uses: ./.github/workflows/docker_image_build_flow.yaml
