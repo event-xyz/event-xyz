@@ -165,6 +165,12 @@ func HandleCheckpoint(ctx *gin.Context) {
 	log.Println(dbParticipant, checkpointCleared, err)
 
 	switch err {
+	case database.ErrCheckpointCrossed:
+		{
+			log.Println(err)
+			ctx.JSON(http.StatusInternalServerError, gin.H{"message": "The participant has already crossed the checkpoint"})
+			return
+		}
 	case database.ErrDbOpenFailure:
 		{
 			log.Println(err)

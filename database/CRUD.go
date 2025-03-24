@@ -28,6 +28,7 @@ var (
 var (
 	ErrParticipantAbsent = fmt.Errorf("participant never checkedin")
 	ErrParticipantLeft   = fmt.Errorf("participant has left the event")
+	ErrCheckpointCrossed = fmt.Errorf("participant has already cleared the checkpoint")
 )
 
 // Event authorised user specific

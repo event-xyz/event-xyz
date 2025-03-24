@@ -3,6 +3,7 @@
 *.key
 *.png
 *.csv
+!test.csv
 .env
 event-loop-backend
 eventloop

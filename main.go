@@ -12,7 +12,6 @@ import (
 )
 
 func main() {
-
 	isDevBuild := os.Getenv("ELOOP_DEV")
 
 	err := database.InitializeDB()
