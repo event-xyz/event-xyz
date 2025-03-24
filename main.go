@@ -2,6 +2,7 @@
 package main
 
 import (
+	"encoding/json"
 	"log"
 	"net/http"
 	"os"
@@ -11,10 +12,28 @@ import (
 	"github.com/homebrew-ec-foss/eventloop/handlers"
 )
 
+type Config struct {
+	EnvPath string
+	DbPath  string
+}
+
 func main() {
 	isDevBuild := os.Getenv("ELOOP_DEV")
 
-	err := database.InitializeDB()
+	var buf []byte
+	var config Config
+	buf, err := os.ReadFile("./data/config.json")
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	err = json.Unmarshal(buf, &config)
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	handlers.SetEnvFile(config.EnvPath)
+	err = database.InitializeDB(config.DbPath)
 	if err != nil {
 		log.Fatalln("[MAIN] failed to run InitializeDB")
 	}

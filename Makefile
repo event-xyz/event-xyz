@@ -1,5 +1,4 @@
 build-container-image:
-	docker build -t anirudhsudhir/eventloop .
+	docker build -t eventloop .
 run-container:
-	sqlite3 event.db "VACUUM;"
-	docker run --rm -v ${PWD}/.env:/app/.env -v ${PWD}/event.db:/app/event.db -p 8080:8080 eventloop-image
+	docker run --rm -e ELOOP_DEV=1 -p 8080:8080 -v ${PWD}/tmp:/app/data/ eventloop

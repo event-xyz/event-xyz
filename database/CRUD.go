@@ -37,13 +37,13 @@ var (
 	ErrNoAccess     = fmt.Errorf("incoming request was authoriesed but has no access to the endpoint")
 )
 
-func InitializeDB() error {
+func InitializeDB(dbpath string) error {
 	if DbGlobal == nil {
-		dbPath := os.Getenv("DBPATH")
-		if dbPath == "" {
-			dbPath = "event.db"
+		if dbpath == "" {
+			dbpath = "event.db"
 		}
-		DbGlobal, errGlobal = gorm.Open(sqlite.Open(dbPath), &gorm.Config{})
+
+		DbGlobal, errGlobal = gorm.Open(sqlite.Open(dbpath), &gorm.Config{})
 		if errGlobal != nil {
 			log.Println(errGlobal)
 			return errGlobal

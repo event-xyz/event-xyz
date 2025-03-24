@@ -4,6 +4,7 @@
 *.png
 *.csv
 !test.csv
+tmp/
 .env
 event-loop-backend
 eventloop

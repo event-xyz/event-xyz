@@ -13,6 +13,10 @@ import (
 	"github.com/skip2/go-qrcode"
 )
 
+var (
+	EnvFile *string
+)
+
 // Claims for JWT
 type JWTClaims struct {
 	UUID  string `json:"UUID"`
@@ -24,8 +28,16 @@ type JWTClaims struct {
 
 var ErrJWTFailedClaimsParsing = fmt.Errorf("failed to parse for cliams. Seems like an invalid QR")
 
+func SetEnvFile(path string) {
+	err := godotenv.Load(path)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	EnvFile = &path
+}
+
 func goDotEnvVariable(key string) string {
-	err := godotenv.Load(".env")
+	err := godotenv.Load(*EnvFile)
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -1,0 +1,4 @@
+{
+  "envPath": "/tmp/data/.env",
+  "dbPath": "/tmp/data/events.db"
+}
