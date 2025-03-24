@@ -2,6 +2,7 @@
 *.db
 *.key
 *.png
+*.csv
 .env
 event-loop-backend
 eventloop
