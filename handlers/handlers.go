@@ -165,6 +165,12 @@ func HandleCheckpoint(ctx *gin.Context) {
 	log.Println(dbParticipant, checkpointCleared, err)
 
 	switch err {
+	case database.ErrCheckpointCrossed:
+		{
+			log.Println(err)
+			ctx.JSON(http.StatusInternalServerError, gin.H{"message": "The participant has already crossed the checkpoint"})
+			return
+		}
 	case database.ErrDbOpenFailure:
 		{
 			log.Println(err)
@@ -295,6 +301,12 @@ func HandleCheckout(ctx *gin.Context) {
 		{
 			log.Println("The guy never came!")
 			ctx.JSON(http.StatusBadRequest, gin.H{"message": "Participant has never checked into the envet. Can't proceed with operation"})
+			return
+		}
+	case database.ErrParticipantLeft:
+		{
+			log.Println("The guy left off -_-!")
+			ctx.JSON(http.StatusBadRequest, gin.H{"message": "Participant has already left the event. Can't proceed with operation"})
 			return
 		}
 	}

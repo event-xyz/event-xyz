@@ -3,6 +3,7 @@ package database
 import (
 	"fmt"
 	"log"
+	"os"
 	"slices"
 	"time"
 
@@ -27,6 +28,7 @@ var (
 var (
 	ErrParticipantAbsent = fmt.Errorf("participant never checkedin")
 	ErrParticipantLeft   = fmt.Errorf("participant has left the event")
+	ErrCheckpointCrossed = fmt.Errorf("participant has already cleared the checkpoint")
 )
 
 // Event authorised user specific
@@ -37,7 +39,11 @@ var (
 
 func InitializeDB() error {
 	if DbGlobal == nil {
-		DbGlobal, errGlobal = gorm.Open(sqlite.Open("event.db"), &gorm.Config{})
+		dbPath := os.Getenv("DBPATH")
+		if dbPath == "" {
+			dbPath = "event.db"
+		}
+		DbGlobal, errGlobal = gorm.Open(sqlite.Open(dbPath), &gorm.Config{})
 		if errGlobal != nil {
 			log.Println(errGlobal)
 			return errGlobal
@@ -67,6 +73,11 @@ func InitializeDB() error {
 		if err != nil {
 			log.Fatalln("Failed to migrate db DBAuthoriesedUsers")
 		}
+
+		err = DbGlobal.AutoMigrate(&ClaimsLogs{})
+		if err != nil {
+			log.Fatalln("Failed to migrate db ClaimsLogs")
+		}
 	}
 	log.Println("[CRUD] InitializeDB and Migraated tables sucessfully")
 	return nil
@@ -75,7 +86,11 @@ func InitializeDB() error {
 // Open and return db access struct
 func openDB() (*gorm.DB, error) {
 	if DbGlobal == nil {
-		DbGlobal, errGlobal = gorm.Open(sqlite.Open("event.db"), &gorm.Config{})
+		dbPath := os.Getenv("DBPATH")
+		if dbPath == "" {
+			dbPath = "event.db"
+		}
+		DbGlobal, errGlobal = gorm.Open(sqlite.Open(dbPath), &gorm.Config{})
 		if errGlobal != nil {
 			log.Println(errGlobal)
 			return nil, errGlobal
@@ -104,6 +119,11 @@ func openDB() (*gorm.DB, error) {
 		err = DbGlobal.AutoMigrate(&DBAuthoriesedUsers{})
 		if err != nil {
 			log.Fatalln("Failed to migrate db DBAuthoriesedUsers")
+		}
+
+		err = DbGlobal.AutoMigrate(&ClaimsLogs{})
+		if err != nil {
+			log.Fatalln("Failed to migrate db ClaimsLogs")
 		}
 	}
 	return DbGlobal, nil
@@ -145,7 +165,12 @@ func CheckpointsWithDefaults() *Checkpoints {
 	}
 }
 
-func CreateParticipant(participant *Participant, checkpoints *Checkpoints, uuid string) error {
+func CreateParticipant(
+	participant *Participant,
+	checkpoints *Checkpoints,
+	uuid string,
+	claims string,
+) error {
 	db, err := openDB()
 	if err != nil {
 		return err
@@ -167,6 +192,17 @@ func CreateParticipant(participant *Participant, checkpoints *Checkpoints, uuid 
 			ParticipantID: participant.ID,
 			CheckpointsID: checkpoints.ID,
 		})
+		if txErr.Error != nil {
+			return txErr.Error
+		}
+
+		txErr = tx.Create(&ClaimsLogs{
+			Jwt:           claims,
+			ParticipantID: participant.ID,
+		})
+		if txErr.Error != nil {
+			return txErr.Error
+		}
 
 		return nil
 	})
@@ -378,7 +414,7 @@ func ParticipantEntry(p_uuid string) (*DBParticipant, *Participant, *Checkpoints
 		return nil
 	})
 
-	return &dbParticipant, &participant, &checkpoint, flag, nil
+	return &dbParticipant, &participant, &checkpoint, flag, err
 }
 
 // Update DB with the participant exit checkpoint
@@ -424,16 +460,16 @@ func ParticipantExit(p_uuid string) (*DBParticipant, *Participant, *Checkpoints,
 		}
 
 		if !checkpoint.Checkout {
-			checkpoint.Checkin = true
+			checkpoint.Checkout = true
 			checkpoint.Exit_time = time.Now()
 			db.Save(checkpoint)
 			return nil
 		}
 
-		return nil
+		return ErrParticipantLeft
 	})
 
-	return &dbParticipant, &participant, &checkpoint, flag, nil
+	return &dbParticipant, &participant, &checkpoint, flag, err
 }
 
 func ParticipantCheckpoint(p_uuid string, checkpointName string) (*DBParticipant, *Participant, *Checkpoints, bool, error) {
@@ -523,5 +559,5 @@ func ParticipantCheckpoint(p_uuid string, checkpointName string) (*DBParticipant
 	// Check if participant is in the db
 
 	// Participant has already opted for the option
-	return &dbParticipant, &participant, &checkpoint, flag, nil
+	return &dbParticipant, &participant, &checkpoint, flag, err
 }

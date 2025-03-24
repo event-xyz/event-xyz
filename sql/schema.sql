@@ -11,7 +11,10 @@ PRAGMA table_info(db_participants);
 .print "db_authorised_users"
 PRAGMA table_info(db_authoriesed_users);
 
-.print "\n\n"
+.print "claims_logs"
+PRAGMA table_info(claims_logs);
+
+.print "\n"
 
 .schema
 
