@@ -8,7 +8,6 @@ import (
 	"os"
 
 	"github.com/gin-gonic/gin"
-	"github.com/homebrew-ec-foss/eventloop/database"
 	"github.com/homebrew-ec-foss/eventloop/handlers"
 )
 
@@ -33,10 +32,8 @@ func main() {
 	}
 
 	handlers.SetEnvFile(config.EnvPath)
-	err = database.InitializeDB(config.DbPath)
-	if err != nil {
-		log.Fatalln("[MAIN] failed to run InitializeDB")
-	}
+
+	app := handlers.InitializeAppWithConfig(config.DbPath)
 
 	r := gin.Default()
 	r.Use(handlers.CorsMiddleware())
@@ -45,23 +42,21 @@ func main() {
 		ctx.String(http.StatusOK, "pong")
 	})
 
-	r.POST("/test/creation", handlers.HandleCreateTest)
-
 	// Generic functions for admin control
 
 	r.GET("/search", func(ctx *gin.Context) {})
 
 	// fetch participants details based on JWT ID
 	// fetched based on a qr code
-	r.POST("/qrsearch", handlers.HandleQRFetch)
+	r.POST("/qrsearch", app.HandleQRFetch)
 
-	r.GET("/participant", handlers.HandleParticipantFetch)
+	r.GET("/participant", app.HandleParticipantFetch)
 	// r.POST("/participant", handlers.HandleParticipantUpdate)
 
 	// Additional team addition besides CSV
 	// future prospect
 	r.POST("/createteam", func(ctx *gin.Context) {})
-	r.POST("/login", handlers.HandleLogin)
+	r.POST("/login", app.HandleLogin)
 
 	////////////////////////////////////////////////
 
@@ -69,9 +64,10 @@ func main() {
 	// eg: Crossing checkpoints, etc.
 
 	if isDevBuild == "1" {
-		r.PUT("/checkin", handlers.HandleCheckin)
-		r.PUT("/checkout", handlers.HandleCheckout)
-		r.PUT("/checkpoint", handlers.HandleCheckpoint)
+		r.POST("/test/creation", app.HandleCreateTest)
+		r.PUT("/checkin", app.HandleCheckin)
+		r.PUT("/checkout", app.HandleCheckout)
+		r.PUT("/checkpoint", app.HandleCheckpoint)
 	}
 
 	// TODO: Handle checking by scanner
@@ -81,34 +77,34 @@ func main() {
 	// 	- admin
 
 	// NOTE:
-	volunteers := r.Group("/volunteer", handlers.AuthenticationMiddleware("volunteer"))
+	volunteers := r.Group("/volunteer", app.AuthenticationMiddleware("volunteer"))
 	{
 		// NOTE: endpoints active during events
-		volunteers.PUT("/checkin", handlers.HandleCheckin)
-		volunteers.PUT("/checkout", handlers.HandleCheckout)
-		volunteers.PUT("/checkpoint", handlers.HandleCheckpoint)
+		volunteers.PUT("/checkin", app.HandleCheckin)
+		volunteers.PUT("/checkout", app.HandleCheckout)
+		volunteers.PUT("/checkpoint", app.HandleCheckpoint)
 	}
 
-	r.POST("/create", handlers.HandleCreate)
+	r.POST("/create", app.HandleCreate)
 
 	// NOTE:
-	organiser := r.Group("/organiser", handlers.AuthenticationMiddleware("organiser"))
+	organiser := r.Group("/organiser", app.AuthenticationMiddleware("organiser"))
 	{
 
 		// NOTE: endpoints active during events
-		organiser.PUT("/checkin", handlers.HandleCheckin)
-		organiser.PUT("/checkout", handlers.HandleCheckout)
-		organiser.PUT("/checkpoint", handlers.HandleCheckpoint)
+		organiser.PUT("/checkin", app.HandleCheckin)
+		organiser.PUT("/checkout", app.HandleCheckout)
+		organiser.PUT("/checkpoint", app.HandleCheckpoint)
 	}
 
 	// NOTE:
-	admin := r.Group("/admin", handlers.AuthenticationMiddleware("admin"))
+	admin := r.Group("/admin", app.AuthenticationMiddleware("admin"))
 	{
 
 		// NOTE: endpoints active during events
-		admin.PUT("/checkin", handlers.HandleCheckin)
-		admin.PUT("/checkout", handlers.HandleCheckout)
-		admin.PUT("/checkpoint", handlers.HandleCheckpoint)
+		admin.PUT("/checkin", app.HandleCheckin)
+		admin.PUT("/checkout", app.HandleCheckout)
+		admin.PUT("/checkpoint", app.HandleCheckpoint)
 	}
 
 	err = r.Run(":8080")

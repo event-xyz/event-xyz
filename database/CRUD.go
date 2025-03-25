@@ -3,13 +3,17 @@ package database
 import (
 	"fmt"
 	"log"
-	"os"
 	"slices"
 	"time"
 
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
+
+type EventDB struct {
+	db  *gorm.DB
+	Err error
+}
 
 var (
 	DbGlobal  *gorm.DB
@@ -37,60 +41,13 @@ var (
 	ErrNoAccess     = fmt.Errorf("incoming request was authoriesed but has no access to the endpoint")
 )
 
-func InitializeDB(dbpath string) error {
+func TryInitializeDB(dbpath string) (*EventDB, error) {
 	if DbGlobal == nil {
 		if dbpath == "" {
 			dbpath = "event.db"
 		}
 
 		DbGlobal, errGlobal = gorm.Open(sqlite.Open(dbpath), &gorm.Config{})
-		if errGlobal != nil {
-			log.Println(errGlobal)
-			return errGlobal
-		}
-
-		err := DbGlobal.AutoMigrate(&Checkpoints{})
-		if err != nil {
-			log.Fatalln("Failed to migrate db Checkpoints")
-		}
-
-		err = DbGlobal.AutoMigrate(&Team{})
-		if err != nil {
-			log.Fatalln("Failed to migrate db Team")
-		}
-
-		err = DbGlobal.AutoMigrate(&Participant{})
-		if err != nil {
-			log.Fatalln("Failed to migrate db Participant")
-		}
-
-		err = DbGlobal.AutoMigrate(&DBParticipant{})
-		if err != nil {
-			log.Fatalln("Failed to migrate db DBParticipant")
-		}
-
-		err = DbGlobal.AutoMigrate(&DBAuthoriesedUsers{})
-		if err != nil {
-			log.Fatalln("Failed to migrate db DBAuthoriesedUsers")
-		}
-
-		err = DbGlobal.AutoMigrate(&ClaimsLogs{})
-		if err != nil {
-			log.Fatalln("Failed to migrate db ClaimsLogs")
-		}
-	}
-	log.Println("[CRUD] InitializeDB and Migraated tables sucessfully")
-	return nil
-}
-
-// Open and return db access struct
-func openDB() (*gorm.DB, error) {
-	if DbGlobal == nil {
-		dbPath := os.Getenv("DBPATH")
-		if dbPath == "" {
-			dbPath = "event.db"
-		}
-		DbGlobal, errGlobal = gorm.Open(sqlite.Open(dbPath), &gorm.Config{})
 		if errGlobal != nil {
 			log.Println(errGlobal)
 			return nil, errGlobal
@@ -126,11 +83,24 @@ func openDB() (*gorm.DB, error) {
 			log.Fatalln("Failed to migrate db ClaimsLogs")
 		}
 	}
-	return DbGlobal, nil
+
+	log.Println("[CRUD] InitializeDB and Migraated tables sucessfully")
+	return &EventDB{
+		db:  DbGlobal,
+		Err: errGlobal,
+	}, nil
 }
 
-func CreateTeam(team *Team) error {
-	db, err := openDB()
+// Open and return db access struct
+func (e *EventDB) openDB() (*gorm.DB, error) {
+	if DbGlobal == nil {
+		log.Fatalln("Database not initilised or loaded")
+	}
+	return e.db, nil
+}
+
+func (e *EventDB) CreateTeam(team *Team) error {
+	db, err := e.openDB()
 	if err != nil {
 		return err
 	}
@@ -142,8 +112,8 @@ func CreateTeam(team *Team) error {
 }
 
 // Create records for all participants parsed from the csv
-func CreateParticipants(dbParticipants []DBParticipant) error {
-	db, err := openDB()
+func (e *EventDB) CreateParticipants(dbParticipants []DBParticipant) error {
+	db, err := e.openDB()
 	if err != nil {
 		return err
 	}
@@ -165,13 +135,13 @@ func CheckpointsWithDefaults() *Checkpoints {
 	}
 }
 
-func CreateParticipant(
+func (e *EventDB) CreateParticipant(
 	participant *Participant,
 	checkpoints *Checkpoints,
 	uuid string,
 	claims string,
 ) error {
-	db, err := openDB()
+	db, err := e.openDB()
 	if err != nil {
 		return err
 	}
@@ -210,8 +180,8 @@ func CreateParticipant(
 	return err
 }
 
-func CreateAuthorisedUsersDB() error {
-	db, err := openDB()
+func (e *EventDB) CreateAuthorisedUsersDB() error {
+	db, err := e.openDB()
 	if err != nil {
 		return ErrDbOpenFailure
 	}
@@ -233,8 +203,8 @@ func FetchCheckpoints() []string {
 	return checkpoints
 }
 
-func VerifyLogin(userDetails DBAuthoriesedUsers) (*DBAuthoriesedUsers, error) {
-	db, err := openDB()
+func (e *EventDB) VerifyLogin(userDetails DBAuthoriesedUsers) (*DBAuthoriesedUsers, error) {
+	db, err := e.openDB()
 	if err != nil {
 		return nil, ErrDbOpenFailure
 	}
@@ -307,8 +277,8 @@ func VerifyLogin(userDetails DBAuthoriesedUsers) (*DBAuthoriesedUsers, error) {
 	return &dbAuthUser, nil
 }
 
-func SubAuthentication(sub string, userRole string) (*DBAuthoriesedUsers, error) {
-	db, err := openDB()
+func (e *EventDB) SubAuthentication(sub string, userRole string) (*DBAuthoriesedUsers, error) {
+	db, err := e.openDB()
 	if err != nil {
 		return nil, ErrDbOpenFailure
 	}
@@ -328,8 +298,8 @@ func SubAuthentication(sub string, userRole string) (*DBAuthoriesedUsers, error)
 	}
 }
 
-func JWTFetchParticipant(jwt string) (*DBParticipant, error) {
-	db, err := openDB()
+func (e *EventDB) JWTFetchParticipant(jwt string) (*DBParticipant, error) {
+	db, err := e.openDB()
 	if err != nil {
 		return nil, ErrDbOpenFailure
 	}
@@ -340,8 +310,8 @@ func JWTFetchParticipant(jwt string) (*DBParticipant, error) {
 	return &dbParticipant, nil
 }
 
-func FetchParticipant(name string, phone string) (*Participant, error) {
-	db, err := openDB()
+func (e *EventDB) FetchParticipant(name string, phone string) (*Participant, error) {
+	db, err := e.openDB()
 	if err != nil {
 		return nil, ErrDbOpenFailure
 	}
@@ -372,8 +342,8 @@ func FetchParticipant(name string, phone string) (*Participant, error) {
 // - Pointer to participant
 // - checkin : true if not checked in
 // - error
-func ParticipantEntry(p_uuid string) (*DBParticipant, *Participant, *Checkpoints, bool, error) {
-	db, err := openDB()
+func (e *EventDB) ParticipantEntry(p_uuid string) (*DBParticipant, *Participant, *Checkpoints, bool, error) {
+	db, err := e.openDB()
 	if err != nil {
 		return nil, nil, nil, false, ErrDbOpenFailure
 	}
@@ -424,8 +394,8 @@ func ParticipantEntry(p_uuid string) (*DBParticipant, *Participant, *Checkpoints
 //   - checkin : true if sucessfulyl checked in and
 //     false if alreayd checked in
 //   - error
-func ParticipantExit(p_uuid string) (*DBParticipant, *Participant, *Checkpoints, bool, error) {
-	db, err := openDB()
+func (e *EventDB) ParticipantExit(p_uuid string) (*DBParticipant, *Participant, *Checkpoints, bool, error) {
+	db, err := e.openDB()
 	if err != nil {
 		return nil, nil, nil, false, ErrDbOpenFailure
 	}
@@ -472,8 +442,8 @@ func ParticipantExit(p_uuid string) (*DBParticipant, *Participant, *Checkpoints,
 	return &dbParticipant, &participant, &checkpoint, flag, err
 }
 
-func ParticipantCheckpoint(p_uuid string, checkpointName string) (*DBParticipant, *Participant, *Checkpoints, bool, error) {
-	db, err := openDB()
+func (e *EventDB) ParticipantCheckpoint(p_uuid string, checkpointName string) (*DBParticipant, *Participant, *Checkpoints, bool, error) {
+	db, err := e.openDB()
 	if err != nil {
 		return nil, nil, nil, false, ErrDbOpenFailure
 	}
