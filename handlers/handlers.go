@@ -10,6 +10,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/homebrew-ec-foss/eventloop/database"
@@ -315,8 +316,6 @@ func (a *App) HandleCheckout(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, gin.H{"message": "QR JWT parsed and db operation was sucessful", "checkout": checkout, "operation": true, "dbParticipant": dbParticipant})
 }
 
-func (a *App) HandleParticipantSearch(ctx *gin.Context) {}
-
 func (a *App) HandleQRFetch(ctx *gin.Context) {
 	log.Println("Recieved")
 	body, err := io.ReadAll(ctx.Request.Body)
@@ -456,23 +455,45 @@ func HandleParticipantUpdate(ctx *gin.Context) {
 func (a *App) HandleParticipantSearch(ctx *gin.Context) {
     name := ctx.DefaultQuery("name", "")
     phone := ctx.DefaultQuery("phone", "")
+    log.Printf("Searching participant with name: %s, phone: %s", name, phone)
+
+    authHeader := ctx.GetHeader("Authorization")
+    if authHeader == "" || !strings.HasPrefix(authHeader, "Bearer ") {
+        log.Println("Missing or invalid Authorization header")
+        ctx.JSON(http.StatusUnauthorized, gin.H{"message": "Missing or invalid Authorization header"})
+        return
+    }
+    jwtToken := strings.TrimPrefix(authHeader, "Bearer ")
+
+    valid, claims := a.JWTAuthCheck(jwtToken)
+    if !valid {
+        log.Println("Invalid JWT token")
+        ctx.JSON(http.StatusUnauthorized, gin.H{"message": "Invalid JWT"})
+        return
+    }
+    log.Printf("JWT claims: %v", claims)
 
     results, err := a.Store.SearchParticipants(name, phone)
     if err != nil {
         switch err {
         case database.ErrDbOpenFailure:
+            log.Printf("Database error: %v", err)
             ctx.JSON(http.StatusInternalServerError, gin.H{"message": "Database operation failed"})
             return
         case database.ErrDbMissingRecord:
-            ctx.JSON(http.StatusNotFound, gin.H{"message": "No participants found"})
+            log.Println("No participants found")
+            ctx.JSON(http.StatusNotFound, gin.H{"message": "No participant found"})
             return
         default:
-            ctx.JSON(http.StatusInternalServerError, gin.H{"message": "An error occurred", "error": err.Error()})
+            log.Printf("Unexpected error: %v", err)
+            ctx.JSON(http.StatusInternalServerError, gin.H{"message": "An error occurred"})
             return
         }
     }
 
+    log.Printf("Found %d participants", len(results))
     ctx.JSON(http.StatusOK, gin.H{
+        "message": "Participant fetched successfully",
         "participants": results,
     })
 }
