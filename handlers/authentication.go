@@ -9,12 +9,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/homebrew-ec-foss/eventloop/database"
-	"github.com/joho/godotenv"
 	"github.com/skip2/go-qrcode"
-)
-
-var (
-	EnvFile *string
 )
 
 type Env interface {
@@ -58,14 +53,6 @@ type JWTClaims struct {
 }
 
 var ErrJWTFailedClaimsParsing = fmt.Errorf("failed to parse for cliams. Seems like an invalid QR")
-
-func SetEnvFile(path string) {
-	err := godotenv.Load(path)
-	if err != nil {
-		log.Fatalln(err)
-	}
-	EnvFile = &path
-}
 
 func (a *App) goDotEnvVariable(key string) string {
 	return os.Getenv(key)
