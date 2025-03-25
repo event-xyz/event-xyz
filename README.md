@@ -2,7 +2,10 @@
 
 Visit [`CONTRIBUTING.md`](docs/CONTRIBUTING.md) for setup-help.
 
-## Regenerating localhost certificates
+## Running in developement mode
+To run in development mode add `ELOOP_DEV=1` in `.env`
+
+### Regenerating localhost certificates
 
 > Necessary for https for go backend servers
 

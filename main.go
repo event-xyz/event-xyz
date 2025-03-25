@@ -87,8 +87,15 @@ func main() {
 		admin.PUT("/checkpoint", app.HandleCheckpoint)
 	}
 
-	err := r.Run(":8080")
-	if err != nil {
-		log.Fatal(err)
+	if isDevBuild == "1" {
+		err := r.RunTLS(":8080", "localhost.crt", "localhost.key")
+		if err != nil {
+			log.Fatal(err)
+		}
+	} else {
+		err := r.Run(":8080")
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 }
