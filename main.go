@@ -12,6 +12,7 @@ import (
 
 func main() {
 	isDevBuild := os.Getenv("ELOOP_DEV")
+	isHttpsServer := os.Getenv("ELOOP_HTTP")
 
 	app := handlers.InitializeAppWithConfig("./data/config.json")
 
@@ -87,7 +88,7 @@ func main() {
 		admin.PUT("/checkpoint", app.HandleCheckpoint)
 	}
 
-	if isDevBuild == "1" {
+	if isHttpsServer == "1" {
 		err := r.RunTLS(":8080", "localhost.crt", "localhost.key")
 		if err != nil {
 			log.Fatal(err)
