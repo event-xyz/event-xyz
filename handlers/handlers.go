@@ -15,7 +15,7 @@ import (
 	"github.com/homebrew-ec-foss/eventloop/database"
 )
 
-func HandleCreateTest(ctx *gin.Context) {
+func (a *App) HandleCreateTest(ctx *gin.Context) {
 	file, err := ctx.FormFile("file")
 	if err != nil {
 		ctx.String(http.StatusBadRequest, "Error: No file uploaded")
@@ -53,7 +53,7 @@ func HandleCreateTest(ctx *gin.Context) {
 		formEntriesMap = append(formEntriesMap, entry)
 	}
 
-	participants, err := ParseParticipants(database.DbGlobal, formEntriesMap)
+	participants, err := a.ParseParticipants(a.Store.Db, formEntriesMap)
 	if err != nil {
 		ctx.String(http.StatusInternalServerError, "Error: Failed to write records to database")
 	}
@@ -65,7 +65,7 @@ func HandleCreateTest(ctx *gin.Context) {
 // HandleCreate only handles the incoming file
 // - Create db based on event name
 // - Store imporatnt event related info regarding date, etc...
-func HandleCreate(ctx *gin.Context) {
+func (a *App) HandleCreate(ctx *gin.Context) {
 	file, err := ctx.FormFile("file")
 	if err != nil {
 		ctx.String(http.StatusBadRequest, "Error: No file uploaded")
@@ -109,7 +109,7 @@ func HandleCreate(ctx *gin.Context) {
 	}
 
 	// Parsing the csv to a slice of Participants struct
-	participants, err := ParseParticipants(database.DbGlobal, formEntriesMap)
+	participants, err := a.ParseParticipants(a.Store.Db, formEntriesMap)
 	if err != nil {
 		ctx.String(http.StatusInternalServerError, "Error: Failed to write records to the database")
 	}
@@ -129,7 +129,7 @@ func HandleCreate(ctx *gin.Context) {
 }
 
 // Handler receives the JWT and manages checkpoint(Eg: Dinner) updates
-func HandleCheckpoint(ctx *gin.Context) {
+func (a *App) HandleCheckpoint(ctx *gin.Context) {
 	// Read the request body
 	body, err := io.ReadAll(ctx.Request.Body)
 	if err != nil {
@@ -145,7 +145,7 @@ func HandleCheckpoint(ctx *gin.Context) {
 		return
 	}
 
-	jwtClaims, err := GetClaimsInfo(data["jwt"].(string))
+	jwtClaims, err := a.GetClaimsInfo(data["jwt"].(string))
 	if err != nil && jwtClaims == nil {
 		log.Println("Invalid jwt")
 		ctx.JSON(http.StatusBadRequest, gin.H{"message": "Failed to pasrse JWT for the cliams. Seems like an invlaid QR"})
@@ -161,7 +161,7 @@ func HandleCheckpoint(ctx *gin.Context) {
 	}
 	log.Println("JWT claims:", jwtClaims)
 
-	dbParticipant, _, _, checkpointCleared, err := database.ParticipantCheckpoint(jwtClaims["UUID"].(string), checkpointName)
+	dbParticipant, _, _, checkpointCleared, err := a.Store.ParticipantCheckpoint(jwtClaims["UUID"].(string), checkpointName)
 	log.Println(dbParticipant, checkpointCleared, err)
 
 	switch err {
@@ -201,7 +201,7 @@ func HandleCheckpoint(ctx *gin.Context) {
 }
 
 // Handler receives the JWT and manages event enrty updates
-func HandleCheckin(ctx *gin.Context) {
+func (a *App) HandleCheckin(ctx *gin.Context) {
 	// Read the request body
 	body, err := io.ReadAll(ctx.Request.Body)
 	if err != nil {
@@ -219,7 +219,7 @@ func HandleCheckin(ctx *gin.Context) {
 	}
 
 	// Parsing claims and validating JWT
-	jwtClaims, err := GetClaimsInfo(data["jwt"].(string))
+	jwtClaims, err := a.GetClaimsInfo(data["jwt"].(string))
 	if err != nil && jwtClaims == nil {
 		log.Println("Invalid jwt")
 		ctx.JSON(http.StatusBadRequest, gin.H{"message": "Failed to pasrse JWT for the cliams. Seems like an invlaid QR"})
@@ -227,7 +227,7 @@ func HandleCheckin(ctx *gin.Context) {
 	}
 
 	// Querying DB for participant and updating with entry
-	dbParticipant, _, _, checkin, err := database.ParticipantEntry(jwtClaims["UUID"].(string))
+	dbParticipant, _, _, checkin, err := a.Store.ParticipantEntry(jwtClaims["UUID"].(string))
 
 	switch err {
 	case database.ErrDbOpenFailure:
@@ -253,7 +253,7 @@ func HandleCheckin(ctx *gin.Context) {
 	return
 }
 
-func HandleCheckout(ctx *gin.Context) {
+func (a *App) HandleCheckout(ctx *gin.Context) {
 	// Read the request body
 	body, err := io.ReadAll(ctx.Request.Body)
 	if err != nil {
@@ -272,7 +272,7 @@ func HandleCheckout(ctx *gin.Context) {
 	// DEBUG
 
 	// Parsing claims and validating JWT
-	jwtClaims, err := GetClaimsInfo(data["jwt"].(string))
+	jwtClaims, err := a.GetClaimsInfo(data["jwt"].(string))
 
 	if err != nil && jwtClaims == nil {
 		log.Println("Invalid jwt")
@@ -283,7 +283,7 @@ func HandleCheckout(ctx *gin.Context) {
 	log.Println(jwtClaims)
 
 	// Querying DB for participant and updating with entry
-	dbParticipant, _, _, checkout, err := database.ParticipantExit(jwtClaims["UUID"].(string))
+	dbParticipant, _, _, checkout, err := a.Store.ParticipantExit(jwtClaims["UUID"].(string))
 
 	switch err {
 	case database.ErrDbOpenFailure:
@@ -315,9 +315,9 @@ func HandleCheckout(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, gin.H{"message": "QR JWT parsed and db operation was sucessful", "checkout": checkout, "operation": true, "dbParticipant": dbParticipant})
 }
 
-func HandleParticipantSearch(ctx *gin.Context) {}
+func (a *App) HandleParticipantSearch(ctx *gin.Context) {}
 
-func HandleQRFetch(ctx *gin.Context) {
+func (a *App) HandleQRFetch(ctx *gin.Context) {
 	log.Println("Recieved")
 	body, err := io.ReadAll(ctx.Request.Body)
 	if err != nil {
@@ -334,7 +334,7 @@ func HandleQRFetch(ctx *gin.Context) {
 	}
 
 	// Parsing claims and validating JWT
-	jwtClaims, err := GetClaimsInfo(data["jwt"].(string))
+	jwtClaims, err := a.GetClaimsInfo(data["jwt"].(string))
 
 	if err != nil && jwtClaims == nil {
 		log.Println("Invalid jwt")
@@ -342,7 +342,7 @@ func HandleQRFetch(ctx *gin.Context) {
 		return
 	}
 
-	dbparticipant, err := database.JWTFetchParticipant(data["jwt"].(string))
+	dbparticipant, err := a.Store.JWTFetchParticipant(data["jwt"].(string))
 
 	log.Println(dbparticipant)
 
@@ -357,7 +357,7 @@ func HandleQRFetch(ctx *gin.Context) {
 // This endpoint exposes way too much data
 // Non JWTID basesd search expects the name and phone to
 // be unique together
-func HandleParticipantFetch(ctx *gin.Context) {
+func (a *App) HandleParticipantFetch(ctx *gin.Context) {
 	jwtID := ctx.DefaultQuery("jwtID", "")
 	partName := ctx.DefaultQuery("pname", "")
 	partPhone := ctx.DefaultQuery("pphone", "")
@@ -366,12 +366,12 @@ func HandleParticipantFetch(ctx *gin.Context) {
 
 	if jwtID != "" {
 		// search based on JWT ID
-		valid, _ := JWTAuthCheck(jwtID)
+		valid, _ := a.JWTAuthCheck(jwtID)
 		if !valid {
 			ctx.JSON(http.StatusBadRequest, gin.H{"message": "Invalid jwt ID"})
 			return
 		}
-		dbParticipant, err := database.JWTFetchParticipant(jwtID)
+		dbParticipant, err := a.Store.JWTFetchParticipant(jwtID)
 		if errors.Is(err, database.ErrDbOpenFailure) {
 			log.Println(err)
 			ctx.JSON(http.StatusInternalServerError, gin.H{"message": "Database OP failed server side, contact operators"})
@@ -381,7 +381,7 @@ func HandleParticipantFetch(ctx *gin.Context) {
 		return
 	} else {
 		log.Println("Fetching based on ID")
-		dbParticipant, err := database.FetchParticipant(partName, partPhone)
+		dbParticipant, err := a.Store.FetchParticipant(partName, partPhone)
 		switch err {
 		case database.ErrDbOpenFailure:
 			{
@@ -399,7 +399,7 @@ func HandleParticipantFetch(ctx *gin.Context) {
 	}
 }
 
-func HandleLogin(ctx *gin.Context) {
+func (a *App) HandleLogin(ctx *gin.Context) {
 	// apparently map only i needto do
 	var requestBody map[string]interface{}
 
@@ -420,7 +420,7 @@ func HandleLogin(ctx *gin.Context) {
 		SUB:           requestBody["sub"].(string),
 	}
 
-	dbAuthUser, err := database.VerifyLogin(incomingUserReq)
+	dbAuthUser, err := a.Store.VerifyLogin(incomingUserReq)
 	log.Println(err)
 	switch err {
 	case database.ErrDbOpenFailure:

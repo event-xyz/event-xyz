@@ -9,13 +9,39 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/homebrew-ec-foss/eventloop/database"
-	"github.com/joho/godotenv"
 	"github.com/skip2/go-qrcode"
 )
 
-var (
-	EnvFile *string
-)
+type Env interface {
+	Getenv(key string) string
+}
+
+type OsEnv struct{}
+
+func (m *OsEnv) Getenv(key string) string {
+	return os.Getenv(key)
+}
+
+type MockEnv struct {
+	env map[string]string
+}
+
+type MockEnvPair struct {
+	key   string
+	value string
+}
+
+func (m *MockEnv) Getenv(key string) string {
+	val, exists := m.env[key]
+	if !exists {
+		return ""
+	}
+	return val
+}
+
+func (m *MockEnv) Setenv(mockEnvPair MockEnvPair) {
+	m.env[mockEnvPair.key] = mockEnvPair.value
+}
 
 // Claims for JWT
 type JWTClaims struct {
@@ -28,28 +54,15 @@ type JWTClaims struct {
 
 var ErrJWTFailedClaimsParsing = fmt.Errorf("failed to parse for cliams. Seems like an invalid QR")
 
-func SetEnvFile(path string) {
-	err := godotenv.Load(path)
-	if err != nil {
-		log.Fatalln(err)
-	}
-	EnvFile = &path
-}
-
-func goDotEnvVariable(key string) string {
-	err := godotenv.Load(*EnvFile)
-	if err != nil {
-		log.Fatal(err)
-	}
-
+func (a *App) goDotEnvVariable(key string) string {
 	return os.Getenv(key)
 }
 
-func JWTAuthCheck(rawtoken string) (bool, *jwt.MapClaims) {
+func (a *App) JWTAuthCheck(rawtoken string) (bool, *jwt.MapClaims) {
 	parser_struct := jwt.Parser{}
 
 	claims := jwt.MapClaims{}
-	dotenv := goDotEnvVariable("JWT_SECRET_KEY")
+	dotenv := a.goDotEnvVariable("JWT_SECRET_KEY")
 	token, err := parser_struct.ParseWithClaims(rawtoken, claims, func(t *jwt.Token) (interface{}, error) {
 		return []byte(dotenv), nil
 	})
@@ -78,7 +91,7 @@ func GenerateUUID(user_record database.Participant) (string, error) {
 //
 //	All the jwt toekns use email in place of
 //	college name :P
-func GenerateAuthoToken(user_record database.Participant, p_uuid string) (string, *JWTClaims) {
+func (a *App) GenerateAuthoToken(user_record database.Participant, p_uuid string) (string, *JWTClaims) {
 	// var id int64
 
 	// TODO: generate UUI.
@@ -92,7 +105,7 @@ func GenerateAuthoToken(user_record database.Participant, p_uuid string) (string
 		},
 	}
 
-	dotenv := goDotEnvVariable("JWT_SECRET_KEY")
+	dotenv := a.goDotEnvVariable("JWT_SECRET_KEY")
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	signedString, err := token.SignedString([]byte(dotenv))
@@ -104,11 +117,11 @@ func GenerateAuthoToken(user_record database.Participant, p_uuid string) (string
 	return signedString, &claims
 }
 
-func GetClaimsInfo(rawtoken string) (map[string]interface{}, error) {
+func (a *App) GetClaimsInfo(rawtoken string) (map[string]interface{}, error) {
 	parser_struct := jwt.Parser{}
 	claims := jwt.MapClaims{}
 	token, err := parser_struct.ParseWithClaims(rawtoken, claims, func(t *jwt.Token) (interface{}, error) {
-		dotenv := goDotEnvVariable("JWT_SECRET_KEY")
+		dotenv := a.goDotEnvVariable("JWT_SECRET_KEY")
 		return []byte(dotenv), nil
 	})
 	if err != nil {

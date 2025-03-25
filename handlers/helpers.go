@@ -31,7 +31,7 @@ func CorsMiddleware() gin.HandlerFunc {
 	}
 }
 
-func AuthenticationMiddleware(userRole string) gin.HandlerFunc {
+func (a *App) AuthenticationMiddleware(userRole string) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		log.Println("Authenticating")
 
@@ -55,7 +55,7 @@ func AuthenticationMiddleware(userRole string) gin.HandlerFunc {
 
 		user_sub := data["sub"].(string)
 
-		_, err = database.SubAuthentication(user_sub, userRole)
+		_, err = a.Store.SubAuthentication(user_sub, userRole)
 
 		switch err {
 		case database.ErrDbOpenFailure:
@@ -81,7 +81,7 @@ func AuthenticationMiddleware(userRole string) gin.HandlerFunc {
 }
 
 // Parsing a slice of maps(rows of records) from csv data to a slice of participant structs
-func ParseParticipants(db *gorm.DB, teamRecords []map[string]string) (*[]database.Participant, error) {
+func (a *App) ParseParticipants(db *gorm.DB, teamRecords []map[string]string) (*[]database.Participant, error) {
 	participants := []database.Participant{}
 
 	for i := 0; i < len(teamRecords); i++ {
@@ -92,7 +92,7 @@ func ParseParticipants(db *gorm.DB, teamRecords []map[string]string) (*[]databas
 			Team:  record["Team Name"],
 			Email: teamLeaderEmail,
 		}
-		err := database.CreateTeam(&team)
+		err := a.Store.CreateTeam(&team)
 		if err != nil {
 			log.Fatalln("failed to create a team", err)
 			continue
@@ -117,14 +117,14 @@ func ParseParticipants(db *gorm.DB, teamRecords []map[string]string) (*[]databas
 				}
 
 				pid, _ := GenerateUUID(participant)
-				signedString, _ := GenerateAuthoToken(participant, pid)
+				signedString, _ := a.GenerateAuthoToken(participant, pid)
 
 				_, err = GenerateQR(signedString, participant.Name, teamLeaderEmail, pid)
 				if err != nil {
 					log.Fatal(err)
 				}
 
-				database.CreateParticipant(&participant, database.CheckpointsWithDefaults(), pid, signedString)
+				a.Store.CreateParticipant(&participant, database.CheckpointsWithDefaults(), pid, signedString)
 
 				participants = append(participants, participant)
 			}
@@ -134,35 +134,7 @@ func ParseParticipants(db *gorm.DB, teamRecords []map[string]string) (*[]databas
 	return &participants, nil
 }
 
-// func CreateDBParticipants(participantsRec []database.Participant) ([]database.DBParticipant, error) {
-// 	var participantPointers []database.DBParticipant
-//
-// 	for _, p := range participantsRec {
-// 		pid, _ := GenerateUUID(p)
-// 		signedString, _ := GenerateAuthoToken(p, pid)
-//
-// 		_, err := GenerateQR(signedString, p.Name, p.Email, pid)
-// 		if err != nil {
-// 			log.Fatal(err)
-// 		}
-//
-// 		participantPointers = append(participantPointers, database.DBParticipant{
-// 			ID:          pid,
-// 			Participant: p,
-// 			Checkpoints: database.Checkpoints{
-// 				Checkin:   false,
-// 				Checkout:  false,
-// 				Snacks:    false,
-// 				Dinner:    false,
-// 				Breakfast: false,
-// 			},
-// 		})
-// 	}
-//
-// 	return participantPointers, nil
-// }
-
-func saveFile(file *multipart.FileHeader) error {
+func (a *App) saveFile(file *multipart.FileHeader) error {
 	src, err := file.Open()
 	if err != nil {
 		return err
