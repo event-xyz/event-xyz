@@ -117,7 +117,7 @@ func (a *App) ParseParticipants(db *gorm.DB, teamRecords []map[string]string) (*
 				}
 
 				pid, _ := GenerateUUID(participant)
-				signedString, _ := GenerateAuthoToken(participant, pid)
+				signedString, _ := a.GenerateAuthoToken(participant, pid)
 
 				_, err = GenerateQR(signedString, participant.Name, teamLeaderEmail, pid)
 				if err != nil {

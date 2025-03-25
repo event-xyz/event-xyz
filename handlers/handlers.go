@@ -145,7 +145,7 @@ func (a *App) HandleCheckpoint(ctx *gin.Context) {
 		return
 	}
 
-	jwtClaims, err := GetClaimsInfo(data["jwt"].(string))
+	jwtClaims, err := a.GetClaimsInfo(data["jwt"].(string))
 	if err != nil && jwtClaims == nil {
 		log.Println("Invalid jwt")
 		ctx.JSON(http.StatusBadRequest, gin.H{"message": "Failed to pasrse JWT for the cliams. Seems like an invlaid QR"})
@@ -219,7 +219,7 @@ func (a *App) HandleCheckin(ctx *gin.Context) {
 	}
 
 	// Parsing claims and validating JWT
-	jwtClaims, err := GetClaimsInfo(data["jwt"].(string))
+	jwtClaims, err := a.GetClaimsInfo(data["jwt"].(string))
 	if err != nil && jwtClaims == nil {
 		log.Println("Invalid jwt")
 		ctx.JSON(http.StatusBadRequest, gin.H{"message": "Failed to pasrse JWT for the cliams. Seems like an invlaid QR"})
@@ -272,7 +272,7 @@ func (a *App) HandleCheckout(ctx *gin.Context) {
 	// DEBUG
 
 	// Parsing claims and validating JWT
-	jwtClaims, err := GetClaimsInfo(data["jwt"].(string))
+	jwtClaims, err := a.GetClaimsInfo(data["jwt"].(string))
 
 	if err != nil && jwtClaims == nil {
 		log.Println("Invalid jwt")
@@ -334,7 +334,7 @@ func (a *App) HandleQRFetch(ctx *gin.Context) {
 	}
 
 	// Parsing claims and validating JWT
-	jwtClaims, err := GetClaimsInfo(data["jwt"].(string))
+	jwtClaims, err := a.GetClaimsInfo(data["jwt"].(string))
 
 	if err != nil && jwtClaims == nil {
 		log.Println("Invalid jwt")
@@ -366,7 +366,7 @@ func (a *App) HandleParticipantFetch(ctx *gin.Context) {
 
 	if jwtID != "" {
 		// search based on JWT ID
-		valid, _ := JWTAuthCheck(jwtID)
+		valid, _ := a.JWTAuthCheck(jwtID)
 		if !valid {
 			ctx.JSON(http.StatusBadRequest, gin.H{"message": "Invalid jwt ID"})
 			return

@@ -2,7 +2,6 @@
 package main
 
 import (
-	"encoding/json"
 	"log"
 	"net/http"
 	"os"
@@ -11,29 +10,10 @@ import (
 	"github.com/homebrew-ec-foss/eventloop/handlers"
 )
 
-type Config struct {
-	EnvPath string
-	DbPath  string
-}
-
 func main() {
 	isDevBuild := os.Getenv("ELOOP_DEV")
 
-	var buf []byte
-	var config Config
-	buf, err := os.ReadFile("./data/config.json")
-	if err != nil {
-		log.Fatalln(err)
-	}
-
-	err = json.Unmarshal(buf, &config)
-	if err != nil {
-		log.Fatalln(err)
-	}
-
-	handlers.SetEnvFile(config.EnvPath)
-
-	app := handlers.InitializeAppWithConfig(config.DbPath)
+	app := handlers.InitializeAppWithConfig("./data/config.json")
 
 	r := gin.Default()
 	r.Use(handlers.CorsMiddleware())
@@ -107,7 +87,7 @@ func main() {
 		admin.PUT("/checkpoint", app.HandleCheckpoint)
 	}
 
-	err = r.Run(":8080")
+	err := r.Run(":8080")
 	if err != nil {
 		log.Fatal(err)
 	}
