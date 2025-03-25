@@ -156,3 +156,49 @@ func GenerateQR(signedString, participantName string, leaderEmail string, uuid s
 
 	return png, nil
 }
+
+func (a *App) HandleParticipantSearch(ctx *gin.Context) {
+    name := ctx.DefaultQuery("name", "")
+    phone := ctx.DefaultQuery("phone", "")
+    log.Printf("Searching participants with name: %s, phone: %s", name, phone)
+
+    authHeader := ctx.GetHeader("Authorization")
+    if authHeader == "" || !strings.HasPrefix(authHeader, "Bearer ") {
+        log.Println("Missing or invalid Authorization header")
+        ctx.JSON(http.StatusUnauthorized, gin.H{"message": "Missing or invalid Authorization header"})
+        return
+    }
+    jwtToken := strings.TrimPrefix(authHeader, "Bearer ")
+
+    valid, claims := a.JWTAuthCheck(jwtToken)
+    if !valid {
+        log.Println("Invalid JWT token")
+        ctx.JSON(http.StatusUnauthorized, gin.H{"message": "Invalid JWT"})
+        return
+    }
+    log.Printf("JWT claims: %v", claims)
+
+    results, err := a.Store.SearchParticipants(name, phone)
+    if err != nil {
+        switch err {
+        case database.ErrDbOpenFailure:
+            log.Printf("Database error: %v", err)
+            ctx.JSON(http.StatusInternalServerError, gin.H{"message": "Database operation failed"})
+            return
+        case database.ErrDbMissingRecord:
+            log.Println("No participants found")
+            ctx.JSON(http.StatusNotFound, gin.H{"message": "No participants found"})
+            return
+        default:
+            log.Printf("Unexpected error: %v", err)
+            ctx.JSON(http.StatusInternalServerError, gin.H{"message": "An error occurred"})
+            return
+        }
+    }
+
+    log.Printf("Found %d participants", len(results))
+    ctx.JSON(http.StatusOK, gin.H{
+        "message":      "Participants fetched successfully",
+        "participants": results,
+    })
+}

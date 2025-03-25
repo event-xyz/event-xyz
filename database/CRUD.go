@@ -214,6 +214,7 @@ func (e *EventDB) VerifyLogin(userDetails DBAuthoriesedUsers) (*DBAuthoriesedUse
 		admins := []string{
 			"adityahegde.clg@gmail.com",
 			"adheshathrey2004@gmail.com",
+			"alaynamonteiro0907@gmail.com",
 		}
 
 		organisers := []string{
@@ -313,7 +314,6 @@ func (e *EventDB) FetchParticipant(name string, phone string) (*Participant, err
 	var participant Participant
 
 	err = db.Transaction(func(tx *gorm.DB) error {
-
 		_ = tx.First(&participant, "name = ? and phone = ?", name, phone)
 		log.Println(participant)
 
@@ -328,7 +328,48 @@ func (e *EventDB) FetchParticipant(name string, phone string) (*Participant, err
 		return nil, err
 	}
 	return &participant, err
+}
 
+func (e *EventDB) SearchParticipants(name string, phone string) ([]struct {
+	Participant Participant
+	Checkpoints Checkpoints
+}, error) {
+	db, err := e.openDB()
+	if err != nil {
+		return nil, ErrDbOpenFailure
+	}
+
+	var results []struct {
+		Participant Participant
+		Checkpoints Checkpoints
+	}
+
+	err = db.Transaction(func(tx *gorm.DB) error {
+		query := tx.Model(&Participant{}).
+			Joins("JOIN db_participants ON db_participants.participant_id = participants.id").
+			Joins("JOIN checkpoints ON checkpoints.id = db_participants.checkpoints_id").
+			Select("participants.*, checkpoints.*")
+
+		if name != "" {
+			query = query.Where("participants.name LIKE ?", "%"+name+"%")
+		}
+		if phone != "" {
+			query = query.Where("participants.phone LIKE ?", "%"+phone+"%")
+		}
+
+		// Execute query and scan into struct
+		return query.Find(&results).Error
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	if len(results) == 0 {
+		return nil, ErrDbMissingRecord
+	}
+
+	return results, nil
 }
 
 // Update DB with the participant entry checkpoint

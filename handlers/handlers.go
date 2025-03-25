@@ -452,3 +452,27 @@ func (a *App) HandleLogin(ctx *gin.Context) {
 func HandleParticipantUpdate(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, gin.H{"message": "Participants details updated sucessfully"})
 }
+
+func (a *App) HandleParticipantSearch(ctx *gin.Context) {
+    name := ctx.DefaultQuery("name", "")
+    phone := ctx.DefaultQuery("phone", "")
+
+    results, err := a.Store.SearchParticipants(name, phone)
+    if err != nil {
+        switch err {
+        case database.ErrDbOpenFailure:
+            ctx.JSON(http.StatusInternalServerError, gin.H{"message": "Database operation failed"})
+            return
+        case database.ErrDbMissingRecord:
+            ctx.JSON(http.StatusNotFound, gin.H{"message": "No participants found"})
+            return
+        default:
+            ctx.JSON(http.StatusInternalServerError, gin.H{"message": "An error occurred", "error": err.Error()})
+            return
+        }
+    }
+
+    ctx.JSON(http.StatusOK, gin.H{
+        "participants": results,
+    })
+}

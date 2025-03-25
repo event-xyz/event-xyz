@@ -34,6 +34,7 @@ func main() {
 	r.GET("/participant", app.HandleParticipantFetch)
 	// r.POST("/participant", handlers.HandleParticipantUpdate)
 
+	r.GET("/participants/search", app.HandleParticipantsSearch)
 	// Additional team addition besides CSV
 	// future prospect
 	r.POST("/createteam", func(ctx *gin.Context) {})
@@ -64,6 +65,7 @@ func main() {
 		volunteers.PUT("/checkin", app.HandleCheckin)
 		volunteers.PUT("/checkout", app.HandleCheckout)
 		volunteers.PUT("/checkpoint", app.HandleCheckpoint)
+		volunteers.GET("/participants/search", app.HandleParticipantsSearch)
 	}
 
 	// NOTE:
@@ -74,6 +76,7 @@ func main() {
 		organiser.PUT("/checkin", app.HandleCheckin)
 		organiser.PUT("/checkout", app.HandleCheckout)
 		organiser.PUT("/checkpoint", app.HandleCheckpoint)
+		organiser.GET("/participants/search", app.HandleParticipantsSearch)
 	}
 
 	// NOTE:
@@ -85,6 +88,7 @@ func main() {
 		admin.PUT("/checkin", app.HandleCheckin)
 		admin.PUT("/checkout", app.HandleCheckout)
 		admin.PUT("/checkpoint", app.HandleCheckpoint)
+		admin.GET("/participants/search", app.HandleParticipantsSearch)
 	}
 
 	if isHttpsServer == "1" {
