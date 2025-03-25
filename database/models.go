@@ -30,8 +30,8 @@ type DBAuthoriesedUsers struct {
 	SUB           string
 	VerifiedEmail string
 	UserRole      string
-  Name          string
-  Phone         int64
+	Name          string
+	Phone         int64
 
 	// TOOD:
 	// event name they belong to
@@ -56,7 +56,7 @@ type Participant struct {
 	// TODO: Seperate to a separate
 	// team table
 	ID        int64  `gorm:"primaryKey;not null;autoIncrement"`
-  Name      string `json:"name"`
+	Name      string `json:"name"`
 	Phone     int64  `json:"phone"`
 	Branch    string `json:"branch"`
 	PesHostel string `json:"pesHostel"`

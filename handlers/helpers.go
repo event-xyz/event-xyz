@@ -137,32 +137,32 @@ func (a *App) ParseParticipants(db *gorm.DB, teamRecords []map[string]string) (*
 func (a *App) ParseVolunteers(db *gorm.DB, volunteerRecords []map[string]string) (*[]database.DBAuthoriesedUsers, error) {
 	volunteers := []database.DBAuthoriesedUsers{}
 
-  for _,record := range volunteerRecords {
+	for _, record := range volunteerRecords {
 
 		name := strings.TrimSpace(record["Name"])
 		email := strings.TrimSpace(record["Email"])
 		phoneStr := strings.TrimSpace(record["Phone"])
 
-    phone, err := strconv.ParseInt(phoneStr, 10, 64)
-    if err != nil {
-      log.Println("Invalid phone number : ", phoneStr)
-      return nil, err
-    }
+		phone, err := strconv.ParseInt(phoneStr, 10, 64)
+		if err != nil {
+			log.Println("Invalid phone number : ", phoneStr)
+			return nil, err
+		}
 
-    volunteer := database.DBAuthoriesedUsers{
-      Name:          name,
-      VerifiedEmail: email,
-      Phone:         phone,
-      UserRole:      "volunteer",
-      SUB:           "",
-    }
+		volunteer := database.DBAuthoriesedUsers{
+			Name:          name,
+			VerifiedEmail: email,
+			Phone:         phone,
+			UserRole:      "volunteer",
+			SUB:           "",
+		}
 
-    err = a.Store.CreateVolunteer(&volunteer)
-    if err != nil {
-      log.Println("Error while storing", err)
-    }
+		err = a.Store.CreateVolunteer(&volunteer)
+		if err != nil {
+			log.Println("Error while storing", err)
+		}
 
-    volunteers = append(volunteers, volunteer)
+		volunteers = append(volunteers, volunteer)
 	}
 
 	return &volunteers, nil
