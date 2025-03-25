@@ -452,3 +452,54 @@ func (a *App) HandleLogin(ctx *gin.Context) {
 func HandleParticipantUpdate(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, gin.H{"message": "Participants details updated sucessfully"})
 }
+
+
+func (a *App) HandleVolunteers(ctx *gin.Context) {
+	file, err := ctx.FormFile("file")
+	if err != nil {
+		ctx.String(http.StatusBadRequest, "Error: No file uploaded")
+		return
+	}
+
+	fileContent, err := file.Open()
+	if err != nil {
+		ctx.String(http.StatusInternalServerError, "Error: Failed to open file")
+		return
+	}
+	defer fileContent.Close()
+
+	reader := bufio.NewReader(fileContent)
+	content := bytes.Buffer{}
+	_, err = io.Copy(&content, reader)
+	if err != nil {
+		ctx.String(http.StatusInternalServerError, "Error: Failed to read file")
+		return
+	}
+
+	// Reading csv to a 2-D slice
+	csvReader := csv.NewReader(bytes.NewReader(content.Bytes()))
+	formData, err := csvReader.ReadAll()
+
+	formHeaders := formData[0]
+	formEntriesMap := make([]map[string]string, 0)
+
+	// Converting csv data to a slice of maps (slice has several rows of records, where each row is a map)
+	// Each map contains key-value pairs, where the key is the csv-header for the column
+	for i := 1; i < len(formData); i++ {
+		entry := make(map[string]string)
+		for j := 0; j < len(formHeaders); j++ {
+			entry[formHeaders[j]] = formData[i][j]
+		}
+		// Appending map(row) to slice(all rows)
+		formEntriesMap = append(formEntriesMap, entry)
+	}
+
+	// Parsing the csv to a slice of Participants struct
+  volunteers, err := a.ParseVolunteers(a.Store.Db, formEntriesMap)
+	if err != nil {
+		ctx.String(http.StatusInternalServerError, "Error: Failed to write records to the database")
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{"data": volunteers})
+}
+
