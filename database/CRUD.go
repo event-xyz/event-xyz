@@ -251,19 +251,23 @@ func (e *EventDB) VerifyLogin(userDetails DBAuthoriesedUsers) (*DBAuthoriesedUse
 
 		if slices.Contains(admins, userDetails.VerifiedEmail) {
 			userDetails.UserRole = "admin"
-			log.Println("Hello admin")
+			log.Println("Hello admin ", userDetails.VerifiedEmail)
 		} else if slices.Contains(organisers, userDetails.VerifiedEmail) {
 			userDetails.UserRole = "organiser"
-			log.Println("Hello organiser")
+			log.Println("Hello organiser ", userDetails.VerifiedEmail)
 		} else if slices.Contains(volunteers, userDetails.VerifiedEmail) {
 			userDetails.UserRole = "volunteer"
+			log.Println("Hello volunteer ", userDetails.VerifiedEmail)
 		} else {
 			return nil, ErrDbMissingRecord
 		}
 
-		db.Create(userDetails)
+		db.Create(&userDetails)
+
 		return &userDetails, nil
 	}
+
+	log.Println("user exists in dbAuthUser")
 
 	return &dbAuthUser, nil
 }

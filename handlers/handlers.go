@@ -421,25 +421,32 @@ func (a *App) HandleLogin(ctx *gin.Context) {
 	}
 
 	dbAuthUser, err := a.Store.VerifyLogin(incomingUserReq)
-	log.Println(err)
-	switch err {
-	case database.ErrDbOpenFailure:
-		{
-			log.Println("couldnt return user")
-			ctx.JSON(http.StatusInternalServerError, gin.H{"message": "Database OP failed server side, contact operators", "success": false})
-			return
-		}
-	case database.ErrDbMissingRecord:
-		{
-			log.Println(err)
-			log.Println("Missing databse record")
-			ctx.JSON(http.StatusBadRequest, gin.H{"message": "No records available for", "success": false})
-			return
-		}
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"message": "Database OP failed server side, contact operators", "success": false})
+	} else {
+		ctx.JSON(http.StatusOK, gin.H{"message": "Login successful", "success": true, "dbAuthUser": dbAuthUser})
 	}
+	// if err == nil {
+	// 	log.Println("there is NO error")
+	// }
+	//
+	// switch err {
+	// case database.ErrDbOpenFailure:
+	// 	{
+	// 		log.Println("couldnt return user")
+	// 		ctx.JSON(http.StatusInternalServerError, gin.H{"message": "Database OP failed server side, contact operators", "success": false})
+	// 		return
+	// 	}
+	// case database.ErrDbMissingRecord:
+	// 	{
+	// 		log.Println("Missing databse record")
+	// 		ctx.JSON(http.StatusBadRequest, gin.H{"message": "No records available for", "success": false})
+	// 		return
+	// 	}
+	// }
 
 	// Respond to the client
-	ctx.JSON(http.StatusOK, gin.H{"message": "Login successful", "success": true, "dbAuthUser": dbAuthUser})
+	// ctx.JSON(http.StatusOK, gin.H{"message": "Login successful", "success": true, "dbAuthUser": dbAuthUser})
 }
 
 func HandleParticipantUpdate(ctx *gin.Context) {
