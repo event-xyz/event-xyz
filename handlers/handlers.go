@@ -53,7 +53,7 @@ func (a *App) HandleCreateTest(ctx *gin.Context) {
 		formEntriesMap = append(formEntriesMap, entry)
 	}
 
-	participants, err := a.ParseParticipants(database.DbGlobal, formEntriesMap)
+	participants, err := a.ParseParticipants(a.Store.Db, formEntriesMap)
 	if err != nil {
 		ctx.String(http.StatusInternalServerError, "Error: Failed to write records to database")
 	}
@@ -109,7 +109,7 @@ func (a *App) HandleCreate(ctx *gin.Context) {
 	}
 
 	// Parsing the csv to a slice of Participants struct
-	participants, err := a.ParseParticipants(database.DbGlobal, formEntriesMap)
+	participants, err := a.ParseParticipants(a.Store.Db, formEntriesMap)
 	if err != nil {
 		ctx.String(http.StatusInternalServerError, "Error: Failed to write records to the database")
 	}

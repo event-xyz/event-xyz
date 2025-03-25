@@ -11,14 +11,8 @@ import (
 )
 
 type EventDB struct {
-	db  *gorm.DB
-	Err error
+	Db *gorm.DB
 }
-
-var (
-	DbGlobal  *gorm.DB
-	errGlobal error
-)
 
 // Rather proposed custom error types
 var (
@@ -42,61 +36,58 @@ var (
 )
 
 func TryInitializeDB(dbpath string) (*EventDB, error) {
-	if DbGlobal == nil {
-		if dbpath == "" {
-			dbpath = "event.db"
-		}
+	if dbpath == "" {
+		dbpath = "event.db"
+	}
 
-		DbGlobal, errGlobal = gorm.Open(sqlite.Open(dbpath), &gorm.Config{})
-		if errGlobal != nil {
-			log.Println(errGlobal)
-			return nil, errGlobal
-		}
+	db, err := gorm.Open(sqlite.Open(dbpath), &gorm.Config{})
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
 
-		err := DbGlobal.AutoMigrate(&Checkpoints{})
-		if err != nil {
-			log.Fatalln("Failed to migrate db Checkpoints")
-		}
+	err = db.AutoMigrate(&Checkpoints{})
+	if err != nil {
+		log.Fatalln("Failed to migrate db Checkpoints")
+	}
 
-		err = DbGlobal.AutoMigrate(&Team{})
-		if err != nil {
-			log.Fatalln("Failed to migrate db Team")
-		}
+	err = db.AutoMigrate(&Team{})
+	if err != nil {
+		log.Fatalln("Failed to migrate db Team")
+	}
 
-		err = DbGlobal.AutoMigrate(&Participant{})
-		if err != nil {
-			log.Fatalln("Failed to migrate db Participant")
-		}
+	err = db.AutoMigrate(&Participant{})
+	if err != nil {
+		log.Fatalln("Failed to migrate db Participant")
+	}
 
-		err = DbGlobal.AutoMigrate(&DBParticipant{})
-		if err != nil {
-			log.Fatalln("Failed to migrate db DBParticipant")
-		}
+	err = db.AutoMigrate(&DBParticipant{})
+	if err != nil {
+		log.Fatalln("Failed to migrate db DBParticipant")
+	}
 
-		err = DbGlobal.AutoMigrate(&DBAuthoriesedUsers{})
-		if err != nil {
-			log.Fatalln("Failed to migrate db DBAuthoriesedUsers")
-		}
+	err = db.AutoMigrate(&DBAuthoriesedUsers{})
+	if err != nil {
+		log.Fatalln("Failed to migrate db DBAuthoriesedUsers")
+	}
 
-		err = DbGlobal.AutoMigrate(&ClaimsLogs{})
-		if err != nil {
-			log.Fatalln("Failed to migrate db ClaimsLogs")
-		}
+	err = db.AutoMigrate(&ClaimsLogs{})
+	if err != nil {
+		log.Fatalln("Failed to migrate db ClaimsLogs")
 	}
 
 	log.Println("[CRUD] InitializeDB and Migraated tables sucessfully")
 	return &EventDB{
-		db:  DbGlobal,
-		Err: errGlobal,
+		Db: db,
 	}, nil
 }
 
 // Open and return db access struct
 func (e *EventDB) openDB() (*gorm.DB, error) {
-	if DbGlobal == nil {
+	if e.Db == nil {
 		log.Fatalln("Database not initilised or loaded")
 	}
-	return e.db, nil
+	return e.Db, nil
 }
 
 func (e *EventDB) CreateTeam(team *Team) error {
