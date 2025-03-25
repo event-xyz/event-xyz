@@ -172,21 +172,21 @@ func (e *EventDB) CreateParticipant(
 }
 
 func (e *EventDB) CreateVolunteer(volunteer *DBAuthoriesedUsers) error {
-	db, err := e.openDB()
-	if err != nil {
-		return err
-	}
+  db, err := e.openDB()
+  if err != nil {
+    return err
+  }
 
-	err = db.Transaction(func(tx *gorm.DB) error {
-		txErr := tx.Create(&volunteer)
-		if txErr.Error != nil {
-			return txErr.Error
-		}
+  err = db.Transaction(func (tx *gorm.DB) error {
+    txErr := tx.Create(&volunteer)
+    if txErr.Error != nil {
+      return txErr.Error
+    }
 
-		return nil
-	})
+    return nil
+  })
 
-	return nil
+  return nil
 }
 
 func (e *EventDB) CreateAuthorisedUsersDB() error {

@@ -49,7 +49,7 @@ func main() {
 		r.PUT("/checkin", app.HandleCheckin)
 		r.PUT("/checkout", app.HandleCheckout)
 		r.PUT("/checkpoint", app.HandleCheckpoint)
-		r.POST("/add/volunteer", app.HandleVolunteers)
+    r.POST("/add/volunteer", app.HandleVolunteers)
 	}
 
 	// TODO: Handle checking by scanner
@@ -87,7 +87,7 @@ func main() {
 		admin.PUT("/checkin", app.HandleCheckin)
 		admin.PUT("/checkout", app.HandleCheckout)
 		admin.PUT("/checkpoint", app.HandleCheckpoint)
-		admin.POST("/add/volunteer", app.HandleVolunteers)
+    admin.POST("/add/volunteer", app.HandleVolunteers)
 	}
 
 	if isHttpsServer == "1" {

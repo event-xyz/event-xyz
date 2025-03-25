@@ -453,6 +453,7 @@ func HandleParticipantUpdate(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, gin.H{"message": "Participants details updated sucessfully"})
 }
 
+
 func (a *App) HandleVolunteers(ctx *gin.Context) {
 	file, err := ctx.FormFile("file")
 	if err != nil {
@@ -494,10 +495,11 @@ func (a *App) HandleVolunteers(ctx *gin.Context) {
 	}
 
 	// Parsing the csv to a slice of Participants struct
-	volunteers, err := a.ParseVolunteers(a.Store.Db, formEntriesMap)
+  volunteers, err := a.ParseVolunteers(a.Store.Db, formEntriesMap)
 	if err != nil {
 		ctx.String(http.StatusInternalServerError, "Error: Failed to write records to the database")
 	}
 
 	ctx.JSON(http.StatusOK, gin.H{"data": volunteers})
 }
+
