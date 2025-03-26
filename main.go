@@ -14,7 +14,7 @@ func main() {
 	isDevBuild := os.Getenv("ELOOP_DEV")
 	isHttpsServer := os.Getenv("ELOOP_HTTP")
 
-	app := handlers.InitializeAppWithConfig("./data/config.json")
+	app := handlers.InitializeAppWithConfig("./data/config2.json")
 
 	r := gin.Default()
 	r.Use(handlers.CorsMiddleware())
@@ -66,8 +66,6 @@ func main() {
 		volunteers.PUT("/checkpoint", app.HandleCheckpoint)
 	}
 
-	r.POST("/create", app.HandleCreate)
-
 	// NOTE:
 	organiser := r.Group("/organiser", app.AuthenticationMiddleware("organiser"))
 	{
@@ -83,6 +81,7 @@ func main() {
 	{
 
 		// NOTE: endpoints active during events
+		admin.POST("/create", app.HandleCreate)
 		admin.PUT("/checkin", app.HandleCheckin)
 		admin.PUT("/checkout", app.HandleCheckout)
 		admin.PUT("/checkpoint", app.HandleCheckpoint)

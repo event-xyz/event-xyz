@@ -1,0 +1,191 @@
+From cd4de57fc1e8e06d3b688a3b1a049228aea30e65 Mon Sep 17 00:00:00 2001
+From: Tejas R <tejas.techstack@gmail.com>
+Date: Wed, 26 Mar 2025 00:58:12 +0530
+Subject: [PATCH] feat: add volunteer form parsing
+
+---
+ database/CRUD.go     | 18 ++++++++++++++++
+ database/models.go   |  4 +++-
+ handlers/handlers.go | 51 ++++++++++++++++++++++++++++++++++++++++++++
+ handlers/helpers.go  | 34 +++++++++++++++++++++++++++++
+ main.go              |  2 ++
+ 5 files changed, 108 insertions(+), 1 deletion(-)
+
+diff --git a/database/CRUD.go b/database/CRUD.go
+index 15728bb..e4e794d 100644
+--- a/database/CRUD.go
++++ b/database/CRUD.go
+@@ -171,6 +171,24 @@ func (e *EventDB) CreateParticipant(
+ 	return err
+ }
+ 
++func (e *EventDB) CreateVolunteer(volunteer *DBAuthoriesedUsers) error {
++  db, err := e.openDB()
++  if err != nil {
++    return err
++  }
++
++  err = db.Transaction(func (tx *gorm.DB) error {
++    txErr := tx.Create(&volunteer)
++    if txErr.Error != nil {
++      return txErr.Error
++    }
++
++    return nil
++  })
++
++  return nil
++}
++
+ func (e *EventDB) CreateAuthorisedUsersDB() error {
+ 	db, err := e.openDB()
+ 	if err != nil {
+diff --git a/database/models.go b/database/models.go
+index 4ab2ae5..364044e 100644
+--- a/database/models.go
++++ b/database/models.go
+@@ -30,6 +30,8 @@ type DBAuthoriesedUsers struct {
+ 	SUB           string
+ 	VerifiedEmail string
+ 	UserRole      string
++  Name          string
++  Phone         int64
+ 
+ 	// TOOD:
+ 	// event name they belong to
+@@ -54,7 +56,7 @@ type Participant struct {
+ 	// TODO: Seperate to a separate
+ 	// team table
+ 	ID        int64  `gorm:"primaryKey;not null;autoIncrement"`
+-	Name      string `json:"name"`
++  Name      string `json:"name"`
+ 	Phone     int64  `json:"phone"`
+ 	Branch    string `json:"branch"`
+ 	PesHostel string `json:"pesHostel"`
+diff --git a/handlers/handlers.go b/handlers/handlers.go
+index 10e884f..69f0478 100644
+--- a/handlers/handlers.go
++++ b/handlers/handlers.go
+@@ -452,3 +452,54 @@ func (a *App) HandleLogin(ctx *gin.Context) {
+ func HandleParticipantUpdate(ctx *gin.Context) {
+ 	ctx.JSON(http.StatusOK, gin.H{"message": "Participants details updated sucessfully"})
+ }
++
++
++func (a *App) HandleVolunteers(ctx *gin.Context) {
++	file, err := ctx.FormFile("file")
++	if err != nil {
++		ctx.String(http.StatusBadRequest, "Error: No file uploaded")
++		return
++	}
++
++	fileContent, err := file.Open()
++	if err != nil {
++		ctx.String(http.StatusInternalServerError, "Error: Failed to open file")
++		return
++	}
++	defer fileContent.Close()
++
++	reader := bufio.NewReader(fileContent)
++	content := bytes.Buffer{}
++	_, err = io.Copy(&content, reader)
++	if err != nil {
++		ctx.String(http.StatusInternalServerError, "Error: Failed to read file")
++		return
++	}
++
++	// Reading csv to a 2-D slice
++	csvReader := csv.NewReader(bytes.NewReader(content.Bytes()))
++	formData, err := csvReader.ReadAll()
++
++	formHeaders := formData[0]
++	formEntriesMap := make([]map[string]string, 0)
++
++	// Converting csv data to a slice of maps (slice has several rows of records, where each row is a map)
++	// Each map contains key-value pairs, where the key is the csv-header for the column
++	for i := 1; i < len(formData); i++ {
++		entry := make(map[string]string)
++		for j := 0; j < len(formHeaders); j++ {
++			entry[formHeaders[j]] = formData[i][j]
++		}
++		// Appending map(row) to slice(all rows)
++		formEntriesMap = append(formEntriesMap, entry)
++	}
++
++	// Parsing the csv to a slice of Participants struct
++  volunteers, err := a.ParseVolunteers(a.Store.Db, formEntriesMap)
++	if err != nil {
++		ctx.String(http.StatusInternalServerError, "Error: Failed to write records to the database")
++	}
++
++	ctx.JSON(http.StatusOK, gin.H{"data": volunteers})
++}
++
+diff --git a/handlers/helpers.go b/handlers/helpers.go
+index 50f94d3..e1d724b 100644
+--- a/handlers/helpers.go
++++ b/handlers/helpers.go
+@@ -134,6 +134,40 @@ func (a *App) ParseParticipants(db *gorm.DB, teamRecords []map[string]string) (*
+ 	return &participants, nil
+ }
+ 
++func (a *App) ParseVolunteers(db *gorm.DB, volunteerRecords []map[string]string) (*[]database.DBAuthoriesedUsers, error) {
++	volunteers := []database.DBAuthoriesedUsers{}
++
++  for _,record := range volunteerRecords {
++
++		name := strings.TrimSpace(record["Name"])
++		email := strings.TrimSpace(record["Email"])
++		phoneStr := strings.TrimSpace(record["Phone"])
++
++    phone, err := strconv.ParseInt(phoneStr, 10, 64)
++    if err != nil {
++      log.Println("Invalid phone number : ", phoneStr)
++      return nil, err
++    }
++
++    volunteer := database.DBAuthoriesedUsers{
++      Name:          name,
++      VerifiedEmail: email,
++      Phone:         phone,
++      UserRole:      "volunteer",
++      SUB:           "",
++    }
++
++    err = a.Store.CreateVolunteer(&volunteer)
++    if err != nil {
++      log.Println("Error while storing", err)
++    }
++
++    volunteers = append(volunteers, volunteer)
++	}
++
++	return &volunteers, nil
++}
++
+ func (a *App) saveFile(file *multipart.FileHeader) error {
+ 	src, err := file.Open()
+ 	if err != nil {
+diff --git a/main.go b/main.go
+index 205f7dd..30e5cf9 100644
+--- a/main.go
++++ b/main.go
+@@ -49,6 +49,7 @@ func main() {
+ 		r.PUT("/checkin", app.HandleCheckin)
+ 		r.PUT("/checkout", app.HandleCheckout)
+ 		r.PUT("/checkpoint", app.HandleCheckpoint)
++    r.POST("/add/volunteer", app.HandleVolunteers)
+ 	}
+ 
+ 	// TODO: Handle checking by scanner
+@@ -86,6 +87,7 @@ func main() {
+ 		admin.PUT("/checkin", app.HandleCheckin)
+ 		admin.PUT("/checkout", app.HandleCheckout)
+ 		admin.PUT("/checkpoint", app.HandleCheckpoint)
++    admin.POST("/add/volunteer", app.HandleVolunteers)
+ 	}
+ 
+ 	if isHttpsServer == "1" {
+-- 
+2.43.0
+
