@@ -142,13 +142,16 @@ func sendMail(ctx *Context, receiver Receiver, attachmentPaths []string) error {
 	msg.SetBody("text/plain", ctx.MessageBody)
 
 	for _, attachment := range attachmentPaths {
+		log.Printf("\tAttachment: %s\n", attachment)
 		msg.Attach(attachment)
 	}
 
 	if err := gomail.Send(ctx.MailSender, msg); err != nil {
-		byteInfo := []byte(receiver.email + "\n")
-		if _, err := ctx.UnsentFile.Write(byteInfo); err != nil {
-			return fmt.Errorf("failed to log unsent email for: %s, email may have been sent. (original error): %v", receiver.email, err)
+		if ctx.UnsentFile == nil {
+			byteInfo := []byte(receiver.email + "\n")
+			if _, err := ctx.UnsentFile.Write(byteInfo); err != nil {
+				return fmt.Errorf("failed to log unsent email for: %s, email may have been sent. (original error): %v", receiver.email, err)
+			}
 		}
 
 		log.Printf("Failed to send email to %s. (original error): %v", receiver.email, err) // just log that we couldnt send email and move on

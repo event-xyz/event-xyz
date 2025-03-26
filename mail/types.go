@@ -17,33 +17,28 @@ func (set Set[T]) Contains(ele T) bool {
 	return exists
 }
 
-type GeneralConfig struct {
-	UnsentFilePath string // file to log failed email addresses
-	AttachmentPath string
-	Extension      string
-	MessagePath    string
-	PortNo         int
+type Config struct {
+	UnsentFilePath string `yaml:"unsent_log"`
+	AttachmentPath string `yaml:"attachment_path"`
+	Extension      string `yaml:"extension"`
+	PortNo         int    `yaml:"port_no"`
+	SendFilePath   string `yaml:"sendfile_path"`
+	MessageHead    string `yaml:"message_head"`
+	MessageBody    string `yaml:"message_body"`
+	DevMode        string `yaml:"devmode"`
+	SendWhat       string `yaml:"-"`
+	SendTo         string `yaml:"-"`
 }
 
-type SenderConfig struct {
-	Host        string
-	Username    string
-	Password    string
-	MessageHead string
-	MessageBody string
-}
-
-type FlagsConfig struct {
-	SendWhat     string
-	SendTo       string
-	SendFilePath string
-	DevMode      string
+type Sender struct {
+	Host     string
+	Username string
+	Password string
 }
 
 type Context struct {
-	*GeneralConfig
-	*SenderConfig
-	*FlagsConfig
+	*Config
+	*Sender
 
 	MailSender gomail.SendCloser
 	UnsentFile *os.File

@@ -7,10 +7,10 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"strconv"
 	"strings"
 
-	gomail "gopkg.in/gomail.v2"
+	gomail "gopkg.in/mail.v2"
+	"gopkg.in/yaml.v2"
 )
 
 var (
@@ -27,13 +27,15 @@ func getContext() (*Context, error) {
 	}
 
 	if ctx.UnsentFilePath == "" {
-		return nil, fmt.Errorf("no unsent log file set")
+		log.Println("Warning: No unsent emails log set")
+		ctx.UnsentFile = nil
+	} else {
+		file, err := os.OpenFile(ctx.UnsentFilePath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+		if err != nil {
+			return nil, fmt.Errorf("unable to open unsent log file %s: %v", ctx.UnsentFilePath, err)
+		}
+		ctx.UnsentFile = file
 	}
-	file, err := os.OpenFile(ctx.UnsentFilePath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
-	if err != nil {
-		return nil, fmt.Errorf("unable to open unsent log file %s: %v", ctx.UnsentFilePath, err)
-	}
-	ctx.UnsentFile = file
 
 	if ctx.SendFilePath != "" {
 		log.Printf("Sending only mails listed in file: %s\n", ctx.SendFilePath)
@@ -47,7 +49,7 @@ func getContext() (*Context, error) {
 
 	dialer := gomail.NewDialer(ctx.Host, ctx.PortNo, ctx.Username, ctx.Password)
 
-	if ctx.DevMode == "1" {
+	if ctx.DevMode == "true" {
 		// For production, remove InsecureSkipVerify or set it to false.
 		dialer.TLSConfig = &tls.Config{InsecureSkipVerify: true}
 	}
@@ -62,6 +64,20 @@ func getContext() (*Context, error) {
 	return ctx, nil
 }
 
+func loadConfig(configPath string) (*Config, error) {
+	data, err := os.ReadFile(configPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read config file: %w", err)
+	}
+
+	var config Config
+	if err := yaml.Unmarshal(data, &config); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal config: %w", err)
+	}
+
+	return &config, nil
+}
+
 func getConfig() (*Context, error) {
 	if !flag.Parsed() {
 		flag.Parse()
@@ -71,33 +87,26 @@ func getConfig() (*Context, error) {
 		return nil, fmt.Errorf("environment loading failed: %w", err)
 	}
 
-	portNo, err := strconv.Atoi(os.Getenv("PORTNO"))
-	if err != nil {
-		return nil, fmt.Errorf("enter valid number for PORTNO")
+	configPath := os.Getenv("CONFIGPATH")
+	if configPath == "" {
+		configPath = "config.yaml"
 	}
 
-	general := &GeneralConfig{
-		UnsentFilePath: os.Getenv("UNSENTLOG"),
-		AttachmentPath: os.Getenv("ATTACHMENTPATH"),
-		Extension:      os.Getenv("EXTENSION"),
-		MessagePath:    os.Getenv("MESSAGEPATH"),
-		PortNo:         portNo,
+	config, err := loadConfig(configPath)
+	if err != nil {
+		return nil, err
 	}
-	sender := &SenderConfig{
+
+	sender := &Sender{
 		Host:     os.Getenv("HOST"),
 		Username: os.Getenv("USERNAME"),
 		Password: os.Getenv("PASSWORD"),
 	}
-	flags := &FlagsConfig{
-		SendFilePath: os.Getenv("SENDFILEPATH"),
-		DevMode:      os.Getenv("DEVMODE"),
-	}
 
 	ctx := &Context{
-		GeneralConfig: general,
-		SenderConfig:  sender,
-		FlagsConfig:   flags,
-		Emails:        nil,
+		Config: config,
+		Sender: sender,
+		Emails: nil,
 	}
 
 	// Update static config with flag values.
@@ -117,12 +126,9 @@ func validateConfig(ctx *Context) error {
 		value string
 		name  string
 	}{
-		// portno, message, sendWhat, sendTo, unsent log file are checked elsewhere
-		// extension may be empty
 		{ctx.Username, "USERNAME"},
 		{ctx.Password, "PASSWORD"},
 		{ctx.Host, "HOST"},
-		{ctx.AttachmentPath, "ATTACHMENTPATH"},
 	}
 
 	for _, field := range required {
@@ -178,17 +184,6 @@ func parseFlags(ctx *Context) error {
 
 		ctx.MessageHead = messageDetails[0]
 		ctx.MessageBody = messageDetails[1]
-	} else {
-		if ctx.MessagePath == "" {
-			return fmt.Errorf("no message or message file path provided")
-		}
-		head, body, err := parseMessageFile(ctx.MessagePath)
-		if err != nil {
-			return err
-		}
-
-		ctx.MessageHead = *head
-		ctx.MessageBody = *body
 	}
 
 	if *fileFlag != "" {
@@ -196,20 +191,6 @@ func parseFlags(ctx *Context) error {
 	}
 
 	return nil
-}
-
-func parseMessageFile(path string) (*string, *string, error) {
-	content, err := os.ReadFile(path)
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to read message file: %v", err)
-	}
-
-	lines := strings.SplitN(string(content), "\n", 2)
-	if len(lines) < 2 {
-		return nil, nil, fmt.Errorf("invalid message format, heading and body should be in seperate lines")
-	}
-
-	return &lines[0], &lines[1], nil
 }
 
 func loadEmailsFromFile(path string) (Set[string], error) {
