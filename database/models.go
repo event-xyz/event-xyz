@@ -30,6 +30,8 @@ type DBAuthoriesedUsers struct {
 	SUB           string
 	VerifiedEmail string
 	UserRole      string
+	Name          string
+	Phone         int64
 
 	// TOOD:
 	// event name they belong to
