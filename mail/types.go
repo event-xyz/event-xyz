@@ -1,27 +1,53 @@
 package main
 
-type Config struct {
-	// general config
-	unsentFile     string // file to log all emails we failed to send emails to
-	attachmentPath string
-	extension      string
-	messagePath    string
-	portno         int
+import (
+	"os"
 
-	// sender info
-	host        string
-	username    string
-	password    string
-	messageHead string
-	messageBody string
+	gomail "gopkg.in/mail.v2"
+)
 
-	// flags
-	checkExtension bool
-	// parallel       bool
+type Set[T comparable] map[T]struct{}
 
-	sendSpecific bool
-	sendWhat     string
-	sendTo       string
+func (set Set[T]) Add(ele T) {
+	set[ele] = struct{}{}
+}
+
+func (set Set[T]) Contains(ele T) bool {
+	_, exists := set[ele]
+	return exists
+}
+
+type GeneralConfig struct {
+	UnsentFilePath string // file to log failed email addresses
+	AttachmentPath string
+	Extension      string
+	MessagePath    string
+	PortNo         int
+}
+
+type SenderConfig struct {
+	Host        string
+	Username    string
+	Password    string
+	MessageHead string
+	MessageBody string
+}
+
+type FlagsConfig struct {
+	SendWhat     string
+	SendTo       string
+	SendFilePath string
+	DevMode      string
+}
+
+type Context struct {
+	*GeneralConfig
+	*SenderConfig
+	*FlagsConfig
+
+	MailSender gomail.SendCloser
+	UnsentFile *os.File
+	Emails     Set[string]
 }
 
 type Receiver struct {
