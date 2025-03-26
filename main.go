@@ -34,7 +34,7 @@ func main() {
 	r.GET("/participant", app.HandleParticipantFetch)
 	// r.POST("/participant", handlers.HandleParticipantUpdate)
 
-	r.GET("/participants/search", app.HandleParticipantSearch)
+	r.GET("/participants/search", app.HandleParticipantSearch)	
 	// Additional team addition besides CSV
 	// future prospect
 	r.POST("/createteam", func(ctx *gin.Context) {})
