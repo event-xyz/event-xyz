@@ -7,7 +7,7 @@ run-container:
 	docker run --rm -e ELOOP_DEV=1 -p 8080:8080 -v ${PWD}/data:/app/data/ eventloop
 
 clean_db:
-	-rm ./tmp/*.db
+	-rm ./data/*.db
 
 test_sql:
 	@echo "using ${HOST_DB_PATH}"
