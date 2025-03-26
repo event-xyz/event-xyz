@@ -156,26 +156,3 @@ func GenerateQR(signedString, participantName string, leaderEmail string, uuid s
 
 	return png, nil
 }
-
-func (a *App) JWTAuthCheck(rawtoken string) (bool, *jwt.MapClaims) {
-    parser := jwt.Parser{}
-    claims := jwt.MapClaims{}
-    secret := a.goDotEnvVariable("JWT_SECRET_KEY")
-    if secret == "" {
-        log.Println("JWT_SECRET_KEY not set in environment")
-        return false, nil
-    }
-
-    token, err := parser.ParseWithClaims(rawtoken, claims, func(t *jwt.Token) (interface{}, error) {
-        return []byte(secret), nil
-    })
-    if err != nil {
-        log.Printf("JWT parsing error: %v", err)
-        return false, nil
-    }
-
-    if token.Valid {
-        return true, &claims
-    }
-    return false, nil
-}
