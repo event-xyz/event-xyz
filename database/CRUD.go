@@ -3,7 +3,6 @@ package database
 import (
 	"fmt"
 	"log"
-	"slices"
 	"time"
 
 	"gorm.io/driver/sqlite"
@@ -225,64 +224,29 @@ func (e *EventDB) VerifyLogin(userDetails DBAuthoriesedUsers) (*DBAuthoriesedUse
 
 	if dbAuthUser.VerifiedEmail == "" {
 
-		log.Println("Missing from records")
+		_ = db.First(&dbAuthUser, "verified_email = ?", userDetails.VerifiedEmail)
 
-		// need admin side approval for
-		// organisers and volunteers
-		admins := []string{
-			"adityahegde.clg@gmail.com",
-			"adheshathrey2004@gmail.com",
-		}
-
-		organisers := []string{
-			"anirudh.sudhir1@gmail.com",
-		}
-
-		volunteers := []string{
-			"adimhegde@gmail.com",
-			"naysha.k0708@gmail.com",
-			"devesh6742@gmail.com",
-			"omshivshankar21@gmail.com",
-			"vickspatil1404@gmail.com",
-			"kunalkishoremaverick@gmail.com",
-			"kavyaprakashscei@gmail.com",
-			"nehanshetty2003@gmail.com",
-			"b.himank101@gmail.com",
-			"moulikmachaiah724@gmail.com",
-			"manum262sagara@gmail.com",
-			"disha14072003@gmail.com",
-			"ananya975.p@gmail.com",
-			"prathamshetty0826@gmail.com",
-			"ruthu.hm03@gmail.com",
-			"shashanknadigm03@gmail.com",
-			"keerthanaumesh161@gmail.com",
-			"shreyalizbethrobin@gmail.com",
-			"eshwarra5@gmail.com",
-			"jiteshnayak2004@gmail.com",
-			"sarkarsoham73@gmail.com",
-			"santoshrajpurohit89@gmail.com",
-			"prawnee99@gmail.com",
-			"shubhammookim@gmail.com",
-			"kushagraagarwal2003@gmail.com",
-			"roshinlinson67281@gmail.com",
-		}
-
-		if slices.Contains(admins, userDetails.VerifiedEmail) {
-			userDetails.UserRole = "admin"
-			log.Println("Hello admin ", userDetails.VerifiedEmail)
-		} else if slices.Contains(organisers, userDetails.VerifiedEmail) {
-			userDetails.UserRole = "organiser"
-			log.Println("Hello organiser ", userDetails.VerifiedEmail)
-		} else if slices.Contains(volunteers, userDetails.VerifiedEmail) {
-			userDetails.UserRole = "volunteer"
-			log.Println("Hello volunteer ", userDetails.VerifiedEmail)
-		} else {
+		switch dbAuthUser.UserRole {
+		case "admin":
+			{
+				log.Println("Hello admin ", userDetails.VerifiedEmail)
+			}
+		case "organisers":
+			{
+				log.Println("Hello organiser ", userDetails.VerifiedEmail)
+			}
+		case "volunteer":
+			{
+				log.Println("Hello volunteer ", userDetails.VerifiedEmail)
+			}
+		default:
 			return nil, ErrDbMissingRecord
 		}
 
-		db.Create(&userDetails)
+		dbAuthUser.SUB = userDetails.SUB
+		db.Save(&dbAuthUser)
 
-		return &userDetails, nil
+		return &dbAuthUser, nil
 	}
 
 	log.Println("user exists in dbAuthUser")

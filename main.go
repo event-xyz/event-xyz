@@ -14,7 +14,7 @@ func main() {
 	isDevBuild := os.Getenv("ELOOP_DEV")
 	isHttpsServer := os.Getenv("ELOOP_HTTP")
 
-	app := handlers.InitializeAppWithConfig("./data/config2.json")
+	app := handlers.InitializeAppWithConfig("./data/config.json")
 
 	r := gin.Default()
 	r.Use(handlers.CorsMiddleware())
