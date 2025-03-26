@@ -5,8 +5,11 @@
 *.png
 *.csv
 *.txt
+*.log
 !test.csv
 .env
 event-loop-backend
 eventloop
 eventloop-bin
+/mail/mail
+/mail/**/
