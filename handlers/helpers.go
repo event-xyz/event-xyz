@@ -32,7 +32,7 @@ func CorsMiddleware() gin.HandlerFunc {
 	}
 }
 
-func (a *App) handleFormFile(ctx *gin.Context, userRole string) {
+func (a *App) handleFormData(ctx *gin.Context, userRole string) {
 	log.Println("Middleware auth for multipart/form-file")
 
 	authJson, err := ctx.FormFile("sub")
@@ -56,12 +56,19 @@ func (a *App) handleFormFile(ctx *gin.Context, userRole string) {
 	if err != nil {
 		ctx.String(http.StatusInternalServerError, "Error: Failed to read auth file")
 		ctx.Abort()
+		return
 	}
 
-	user_sub := string(content.Bytes())
-	log.Println("sub:", user_sub)
+	var subBlobJson map[string]any
+	err = json.Unmarshal(content.Bytes(), &subBlobJson)
+	if err != nil {
+		ctx.String(http.StatusInternalServerError, "Error: Failed to parse blob to json")
+		ctx.Abort()
+		return
+	}
 
-	_, err = a.Store.SubAuthentication(user_sub, "admin")
+	_, err = a.Store.SubAuthentication(subBlobJson["sub"].(string), "admin")
+
 	switch err {
 	case database.ErrDbOpenFailure:
 		{
@@ -82,6 +89,7 @@ func (a *App) handleFormFile(ctx *gin.Context, userRole string) {
 			return
 		}
 	}
+	log.Println("Authorised request")
 }
 
 func (a *App) handleApplicationJson(ctx *gin.Context, userRole string) {
@@ -139,11 +147,10 @@ func (a *App) handleApplicationJson(ctx *gin.Context, userRole string) {
 func (a *App) AuthenticationMiddleware(userRole string) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 
-		contType := ctx.Request.Header.Get("Content-Type")
-
+		contType := strings.Split(ctx.Request.Header.Get("Content-Type"), ";")[0]
 		switch contType {
-		case "multipart/form-file":
-			a.handleFormFile(ctx, userRole)
+		case "multipart/form-data":
+			a.handleFormData(ctx, userRole)
 		case "application/json":
 			a.handleApplicationJson(ctx, userRole)
 		}
