@@ -1,0 +1,10 @@
+unsent_log: "unsent.log"
+attachment_path: "attachments"
+extension: ".png"
+port_no: 587
+sendfile_path: ""
+message_head: "Your Subject Here"
+message_body: |
+  This is the first line of your message body.
+  This is the second line.
+devmode: "false"
