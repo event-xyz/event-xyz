@@ -56,12 +56,19 @@ func (a *App) handleFormData(ctx *gin.Context, userRole string) {
 	if err != nil {
 		ctx.String(http.StatusInternalServerError, "Error: Failed to read auth file")
 		ctx.Abort()
+		return
 	}
 
-	user_sub := string(content.Bytes())
-	log.Println("sub:", user_sub)
+	var subBlobJson map[string]any
+	err = json.Unmarshal(content.Bytes(), &subBlobJson)
+	if err != nil {
+		ctx.String(http.StatusInternalServerError, "Error: Failed to parse blob to json")
+		ctx.Abort()
+		return
+	}
 
-	_, err = a.Store.SubAuthentication(user_sub, "admin")
+	_, err = a.Store.SubAuthentication(subBlobJson["sub"].(string), "admin")
+
 	switch err {
 	case database.ErrDbOpenFailure:
 		{
@@ -82,6 +89,7 @@ func (a *App) handleFormData(ctx *gin.Context, userRole string) {
 			return
 		}
 	}
+	log.Println("Authorised request")
 }
 
 func (a *App) handleApplicationJson(ctx *gin.Context, userRole string) {
@@ -139,8 +147,7 @@ func (a *App) handleApplicationJson(ctx *gin.Context, userRole string) {
 func (a *App) AuthenticationMiddleware(userRole string) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 
-		contType := ctx.Request.Header.Get("Content-Type")
-		contType = strings.Split(contType, ";")[0]
+		contType := strings.Split(ctx.Request.Header.Get("Content-Type"), ";")[0]
 		log.Println("req content type", contType)
 
 		switch contType {
@@ -204,6 +211,40 @@ func (a *App) ParseParticipants(db *gorm.DB, teamRecords []map[string]string) (*
 	}
 
 	return &participants, nil
+}
+
+func (a *App) ParseVolunteers(db *gorm.DB, volunteerRecords []map[string]string) (*[]database.DBAuthoriesedUsers, error) {
+	volunteers := []database.DBAuthoriesedUsers{}
+
+	for _, record := range volunteerRecords {
+
+		name := strings.TrimSpace(record["Name"])
+		email := strings.TrimSpace(record["Email"])
+		phoneStr := strings.TrimSpace(record["Phone"])
+
+		phone, err := strconv.ParseInt(phoneStr, 10, 64)
+		if err != nil {
+			log.Println("Invalid phone number : ", phoneStr)
+			return nil, err
+		}
+
+		volunteer := database.DBAuthoriesedUsers{
+			Name:          name,
+			VerifiedEmail: email,
+			Phone:         phone,
+			UserRole:      "volunteer",
+			SUB:           "",
+		}
+
+		err = a.Store.CreateVolunteer(&volunteer)
+		if err != nil {
+			log.Println("Error while storing", err)
+		}
+
+		volunteers = append(volunteers, volunteer)
+	}
+
+	return &volunteers, nil
 }
 
 func (a *App) saveFile(file *multipart.FileHeader) error {
