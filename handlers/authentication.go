@@ -149,8 +149,13 @@ func GenerateQR(signedString, participantName string, teamName string, leaderEma
 		log.Println(err)
 	}
 
-	err = qrcode.WriteFile(signedString, qrcode.Medium, 256, fmt.Sprintf("../test-data/qr-png/%s-%s-%s-%s.png", leaderEmail, teamName, participantName, uuid))
+	qrFileName := fmt.Sprintf("../test-data/qr-png/%s-%s-%s-%s.png", leaderEmail, teamName, participantName, uuid)
+	err = qrcode.WriteFile(signedString, qrcode.Medium, 256, qrFileName)
 	if err != nil {
+		return nil, err
+	}
+
+	if err := annotateQR(qrFileName, fmt.Sprintf("%s-%s", participantName, teamName)); err != nil {
 		return nil, err
 	}
 

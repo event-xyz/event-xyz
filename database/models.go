@@ -26,12 +26,12 @@ const (
 //   - organizers
 //   - volunteers
 type DBAuthoriesedUsers struct {
-	ID            int64 `gorm:"primaryKey;not null;autoIncrement"`
-	SUB           string
-	VerifiedEmail string
-	UserRole      string
-	Name          string
-	Phone         int64
+	ID            int64  `gorm:"primaryKey;not null;autoIncrement" json:"-"`
+	SUB           string `json:"-"`
+	VerifiedEmail string `json:"email"`
+	UserRole      string `json:"-"`
+	Name          string `json:"name"`
+	Phone         int64  `json:"phone"`
 
 	// TOOD:
 	// event name they belong to
