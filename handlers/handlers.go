@@ -161,7 +161,7 @@ func (a *App) HandleCheckpoint(ctx *gin.Context) {
 	}
 	log.Println("JWT claims:", jwtClaims)
 
-	dbParticipant, _, _, checkpointCleared, err := a.Store.ParticipantCheckpoint(jwtClaims["UUID"].(string), checkpointName)
+	dbParticipant, participant, checkpoint, checkpointCleared, err := a.Store.ParticipantCheckpoint(jwtClaims["UUID"].(string), checkpointName)
 	log.Println(dbParticipant, checkpointCleared, err)
 
 	switch err {
@@ -195,9 +195,16 @@ func (a *App) HandleCheckpoint(ctx *gin.Context) {
 		}
 	}
 
+	participantCheckinInfo := ParticipantCheckpointInfo{
+		*participant,
+		*checkpoint,
+	}
+
+	log.Println(participantCheckinInfo)
+
 	// Respond to the client
 	// ctx.JSON(http.StatusOK, gin.H{"message": "QR code content received successfully", "claims": jwtClaims})
-	ctx.JSON(http.StatusOK, gin.H{"message": "QR code parsed sucessfully and operation sucessful", "checkpointCleared": checkpointCleared, "operation": true, "dbParticipant": dbParticipant})
+	ctx.JSON(http.StatusOK, gin.H{"message": "QR code parsed sucessfully and operation sucessful", "checkpointCleared": checkpointCleared, "operation": true, "dbParticipant": participantCheckinInfo})
 }
 
 // Handler receives the JWT and manages event enrty updates
@@ -227,7 +234,7 @@ func (a *App) HandleCheckin(ctx *gin.Context) {
 	}
 
 	// Querying DB for participant and updating with entry
-	dbParticipant, _, _, checkin, err := a.Store.ParticipantEntry(jwtClaims["UUID"].(string))
+	_, participant, checkpoint, checkin, err := a.Store.ParticipantEntry(jwtClaims["UUID"].(string))
 
 	switch err {
 	case database.ErrDbOpenFailure:
@@ -248,8 +255,13 @@ func (a *App) HandleCheckin(ctx *gin.Context) {
 		}
 	}
 
+	participantCheckinInfo := ParticipantCheckpointInfo{
+		*participant,
+		*checkpoint,
+	}
+
 	// Respond to the client
-	ctx.JSON(http.StatusOK, gin.H{"message": "QR JWT parsed and db operation was sucessful", "checkin": checkin, "operation": true, "dbParticipant": dbParticipant})
+	ctx.JSON(http.StatusOK, gin.H{"message": "QR JWT parsed and db operation was sucessful", "checkin": checkin, "operation": true, "dbParticipant": participantCheckinInfo})
 	return
 }
 

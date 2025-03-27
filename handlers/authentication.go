@@ -138,7 +138,7 @@ func (a *App) GetClaimsInfo(rawtoken string) (map[string]interface{}, error) {
 }
 
 // TODO: cleanup arguments for GenerateQR
-func GenerateQR(signedString, participantName string, leaderEmail string, uuid string) ([]byte, error) {
+func GenerateQR(signedString, participantName string, teamName string, leaderEmail string, uuid string) ([]byte, error) {
 	var png []byte
 	png, err := qrcode.Encode(signedString, qrcode.Low, 256)
 	if err != nil {
@@ -149,7 +149,7 @@ func GenerateQR(signedString, participantName string, leaderEmail string, uuid s
 		log.Println(err)
 	}
 
-	err = qrcode.WriteFile(signedString, qrcode.Medium, 256, fmt.Sprintf("../test-data/qr-png/%s-%s-%s.png", leaderEmail, participantName, uuid))
+	err = qrcode.WriteFile(signedString, qrcode.Medium, 256, fmt.Sprintf("../test-data/qr-png/%s-%s-%s-%s.png", leaderEmail, teamName, participantName, uuid))
 	if err != nil {
 		return nil, err
 	}

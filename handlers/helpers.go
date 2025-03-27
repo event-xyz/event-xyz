@@ -18,6 +18,16 @@ import (
 	"gorm.io/gorm"
 )
 
+type ParticipantInfo struct {
+	database.Participant
+	database.Team
+}
+
+type ParticipantCheckpointInfo struct {
+	database.Participant
+	database.Checkpoints
+}
+
 func CorsMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
@@ -160,8 +170,8 @@ func (a *App) AuthenticationMiddleware(userRole string) gin.HandlerFunc {
 }
 
 // Parsing a slice of maps(rows of records) from csv data to a slice of participant structs
-func (a *App) ParseParticipants(db *gorm.DB, teamRecords []map[string]string) (*[]database.Participant, error) {
-	participants := []database.Participant{}
+func (a *App) ParseParticipants(db *gorm.DB, teamRecords []map[string]string) (*[]ParticipantInfo, error) {
+	participants := []ParticipantInfo{}
 
 	for i := 0; i < len(teamRecords); i++ {
 		record := teamRecords[i]
@@ -198,14 +208,19 @@ func (a *App) ParseParticipants(db *gorm.DB, teamRecords []map[string]string) (*
 				pid, _ := GenerateUUID(participant)
 				signedString, _ := a.GenerateAuthoToken(participant, pid)
 
-				_, err = GenerateQR(signedString, participant.Name, teamLeaderEmail, pid)
+				_, err = GenerateQR(signedString, participant.Name, team.Team, teamLeaderEmail, pid)
 				if err != nil {
 					log.Fatal(err)
 				}
 
 				a.Store.CreateParticipant(&participant, database.CheckpointsWithDefaults(), pid, signedString)
 
-				participants = append(participants, participant)
+				participantInfo := ParticipantInfo{
+					participant,
+					team,
+				}
+
+				participants = append(participants, participantInfo)
 			}
 		}
 	}
