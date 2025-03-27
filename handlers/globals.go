@@ -42,9 +42,9 @@ func InitializeMockApp(dbpath string, secretPair MockEnvPair) *App {
 }
 
 func InitializeAppWithConfig(configPath string) *App {
-
 	var buf []byte
 	var config Config
+
 	buf, err := os.ReadFile(configPath)
 	if err != nil {
 		log.Fatalln(err)
@@ -61,7 +61,6 @@ func InitializeAppWithConfig(configPath string) *App {
 	}
 
 	db, err := database.TryInitializeDB(config.DbPath)
-
 	if err != nil {
 		log.Fatalln("[MAIN] failed to run InitializeDB")
 	}

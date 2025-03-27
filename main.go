@@ -93,7 +93,7 @@ func main() {
 			log.Fatal(err)
 		}
 	} else {
-		err := r.Run(":8080")
+		err := r.Run(":7070")
 		if err != nil {
 			log.Fatal(err)
 		}

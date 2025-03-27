@@ -32,8 +32,8 @@ func CorsMiddleware() gin.HandlerFunc {
 	}
 }
 
-func (a *App) handleFormFile(ctx *gin.Context, userRole string) {
-	log.Println("Middleware auth for multipart/form-file")
+func (a *App) handleFormData(ctx *gin.Context, userRole string) {
+	log.Println("Middleware auth for multipart/form-data")
 
 	authJson, err := ctx.FormFile("sub")
 	if err != nil {
@@ -140,10 +140,12 @@ func (a *App) AuthenticationMiddleware(userRole string) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 
 		contType := ctx.Request.Header.Get("Content-Type")
+		contType = strings.Split(contType, ";")[0]
+		log.Println("req content type", contType)
 
 		switch contType {
-		case "multipart/form-file":
-			a.handleFormFile(ctx, userRole)
+		case "multipart/form-data":
+			a.handleFormData(ctx, userRole)
 		case "application/json":
 			a.handleApplicationJson(ctx, userRole)
 		}
