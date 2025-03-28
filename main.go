@@ -50,6 +50,7 @@ func main() {
 		r.PUT("/checkout", app.HandleCheckout)
 		r.PUT("/checkpoint", app.HandleCheckpoint)
 		r.POST("/add/volunteer", app.HandleVolunteers)
+		r.POST("/add/volunteerMan", app.HandleVolunteerManual)
 	}
 
 	// TODO: Handle checking by scanner
@@ -87,6 +88,7 @@ func main() {
 		admin.PUT("/checkout", app.HandleCheckout)
 		admin.PUT("/checkpoint", app.HandleCheckpoint)
 		admin.POST("/add/volunteer", app.HandleVolunteers)
+		admin.POST("/add/volunteerMan", app.HandleVolunteerManual)
 	}
 
 	if isHttpsServer == "1" {
@@ -95,7 +97,7 @@ func main() {
 			log.Fatal(err)
 		}
 	} else {
-		err := r.Run(":7070")
+		err := r.Run(":8080")
 		if err != nil {
 			log.Fatal(err)
 		}
