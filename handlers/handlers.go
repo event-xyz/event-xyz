@@ -513,3 +513,19 @@ func (a *App) HandleVolunteers(ctx *gin.Context) {
 
 	ctx.JSON(http.StatusOK, gin.H{"data": volunteers})
 }
+
+func (a *App) HandleVolunteerManual(ctx *gin.Context) {
+
+	name := ctx.PostForm("name")
+	email := ctx.PostForm("email")
+	phone := ctx.PostForm("phone")
+
+	log.Println(name, email, phone)
+	// Parse volunteer manually.
+	success, volunteer, err := a.ParseVolunteerManual(a.Store.Db, name, email, phone)
+	if err != nil {
+		ctx.String(http.StatusInternalServerError, "Error: Failed to write records to the database")
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{"data": volunteer, "deletionSuccess": success})
+}

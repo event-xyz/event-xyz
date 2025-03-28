@@ -188,6 +188,46 @@ func (e *EventDB) CreateVolunteer(volunteer *DBAuthoriesedUsers) error {
 	return nil
 }
 
+// Returns (success, error) if success is zero then
+// if no rows were affected this means that
+// all three (name, phone and email) were wrong.
+// send a warning to the frontend by setting success as 0.
+func (e *EventDB) CreateVolunteerManual(volunteer *DBAuthoriesedUsers) (int, error) {
+
+	// Initially set success as 1
+	success := 1
+
+	db, err := e.openDB()
+	if err != nil {
+		return 0, err
+	}
+
+	err = db.Transaction(func(tx *gorm.DB) error {
+
+		result := tx.Where("name = ? OR phone = ? OR verified_email = ?",
+			volunteer.Name, volunteer.Phone, volunteer.VerifiedEmail).
+			Delete(&DBAuthoriesedUsers{})
+
+		if result.RowsAffected == 0 {
+			success = 0
+			log.Println("Warning: No existing volunteer found for deletion (manual entry)")
+		}
+
+		txErr := tx.Create(&volunteer)
+		if txErr.Error != nil {
+			return txErr.Error
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return 0, err
+	}
+
+	return success, nil
+}
+
 func (e *EventDB) CreateAuthorisedUsersDB() error {
 	db, err := e.openDB()
 	if err != nil {

@@ -265,6 +265,33 @@ func (a *App) ParseVolunteers(db *gorm.DB, volunteerRecords []map[string]string)
 	return &volunteers, nil
 }
 
+func (a *App) ParseVolunteerManual(db *gorm.DB, name, email, phoneStr string) (int, *[]database.DBAuthoriesedUsers, error) {
+	volunteers := []database.DBAuthoriesedUsers{}
+
+	phone, err := strconv.ParseInt(phoneStr, 10, 64)
+	if err != nil {
+		log.Println("Invalid phone number : ", phoneStr)
+		return 0, nil, err
+	}
+
+	volunteer := database.DBAuthoriesedUsers{
+		Name:          name,
+		VerifiedEmail: email,
+		Phone:         phone,
+		UserRole:      "volunteer",
+		SUB:           "",
+	}
+
+	success, err := a.Store.CreateVolunteerManual(&volunteer)
+	if err != nil {
+		log.Println("Error while storing", err)
+	}
+
+	volunteers = append(volunteers, volunteer)
+
+	return success, &volunteers, nil
+}
+
 func (a *App) saveFile(file *multipart.FileHeader) error {
 	src, err := file.Open()
 	if err != nil {
