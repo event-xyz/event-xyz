@@ -5,6 +5,8 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"image"
+	"image/png"
 	"io"
 	"log"
 	"mime/multipart"
@@ -13,10 +15,21 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/fogleman/gg"
 	"github.com/gin-gonic/gin"
 	"github.com/homebrew-ec-foss/eventloop/database"
 	"gorm.io/gorm"
 )
+
+type ParticipantInfo struct {
+	database.Participant
+	database.Team
+}
+
+type ParticipantCheckpointInfo struct {
+	database.Participant
+	database.Checkpoints
+}
 
 func CorsMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -160,8 +173,8 @@ func (a *App) AuthenticationMiddleware(userRole string) gin.HandlerFunc {
 }
 
 // Parsing a slice of maps(rows of records) from csv data to a slice of participant structs
-func (a *App) ParseParticipants(db *gorm.DB, teamRecords []map[string]string) (*[]database.Participant, error) {
-	participants := []database.Participant{}
+func (a *App) ParseParticipants(db *gorm.DB, teamRecords []map[string]string) (*[]ParticipantInfo, error) {
+	participants := []ParticipantInfo{}
 
 	for i := 0; i < len(teamRecords); i++ {
 		record := teamRecords[i]
@@ -198,14 +211,19 @@ func (a *App) ParseParticipants(db *gorm.DB, teamRecords []map[string]string) (*
 				pid, _ := GenerateUUID(participant)
 				signedString, _ := a.GenerateAuthoToken(participant, pid)
 
-				_, err = GenerateQR(signedString, participant.Name, teamLeaderEmail, pid)
+				_, err = GenerateQR(signedString, participant.Name, team.Team, teamLeaderEmail, pid)
 				if err != nil {
 					log.Fatal(err)
 				}
 
 				a.Store.CreateParticipant(&participant, database.CheckpointsWithDefaults(), pid, signedString)
 
-				participants = append(participants, participant)
+				participantInfo := ParticipantInfo{
+					participant,
+					team,
+				}
+
+				participants = append(participants, participantInfo)
 			}
 		}
 	}
@@ -262,6 +280,47 @@ func (a *App) saveFile(file *multipart.FileHeader) error {
 
 	_, err = io.Copy(dst, src)
 	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func annotateQR(path string, name string) error {
+	// no more than 40 characters allowed
+	if len(name) > 40 {
+		name = name[:40]
+	}
+
+	file, err := os.Open(path)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	img, format, err := image.Decode(file)
+	if err != nil {
+		return err
+	}
+
+	// skip non png files
+	if format != "png" {
+		log.Println("[Warning]: non png file in qr directory")
+		return nil
+	}
+
+	dc := gg.NewContextForImage(img)
+
+	dc.SetRGBA(0, 0, 0, 1)
+	dc.DrawString(name, 10, 10)
+
+	outFile, err := os.Create(path)
+	if err != nil {
+		return err
+	}
+	defer outFile.Close()
+
+	if err = png.Encode(outFile, dc.Image()); err != nil {
 		return err
 	}
 

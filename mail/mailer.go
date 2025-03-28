@@ -139,7 +139,7 @@ func sendMail(ctx *Context, receiver Receiver, attachmentPaths []string) error {
 	msg.SetHeader("From", ctx.Username)
 	msg.SetHeader("To", receiver.email)
 	msg.SetHeader("Subject", ctx.MessageHead)
-	msg.SetBody("text/plain", ctx.MessageBody)
+	msg.SetBody("text/plain", fmt.Sprintf(ctx.MessageBody, receiver.name))
 
 	for _, attachment := range attachmentPaths {
 		log.Printf("\tAttachment: %s\n", attachment)

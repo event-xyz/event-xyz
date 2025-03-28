@@ -6,10 +6,10 @@ import "time"
 type Team struct {
 	// TODO: update by using a UUID
 	ID    int64  `gorm:"primaryKey;not null;autoIncrement"`
-	Team  string `gorm:"not null"`
-	Email string `gorm:"not null"`
+	Team  string `gorm:"not null" json:"team"`
+	Email string `gorm:"not null" json:"email"`
 
-	Participant []Participant
+	Participant []Participant `json:"-"`
 }
 
 const (
@@ -26,12 +26,12 @@ const (
 //   - organizers
 //   - volunteers
 type DBAuthoriesedUsers struct {
-	ID            int64 `gorm:"primaryKey;not null;autoIncrement"`
-	SUB           string
-	VerifiedEmail string
-	UserRole      string
-	Name          string
-	Phone         int64
+	ID            int64  `gorm:"primaryKey;not null;autoIncrement" json:"-"`
+	SUB           string `json:"-"`
+	VerifiedEmail string `json:"email"`
+	UserRole      string `json:"-"`
+	Name          string `json:"name"`
+	Phone         int64  `json:"phone"`
 
 	// TOOD:
 	// event name they belong to
@@ -45,10 +45,10 @@ type DBParticipant struct {
 	UUID string `gorm:"unique"`
 
 	// foreign keys
-	ParticipantID int64
-	Participant   Participant
-	CheckpointsID int64
-	Checkpoints   Checkpoints
+	ParticipantID int64       `json:"-"`
+	Participant   Participant `json:"-"`
+	CheckpointsID int64       `json:"-"`
+	Checkpoints   Checkpoints `json:"-"`
 }
 
 // This struct stores all fields parsed from the csv
@@ -62,8 +62,8 @@ type Participant struct {
 	PesHostel string `json:"pesHostel"`
 
 	// foreign keys
-	TeamID int64
-	Team   Team
+	TeamID int64 `json:"-"`
+	Team   Team  `json:"-"`
 }
 
 // This struct stores all event checkpoints
