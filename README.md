@@ -1,14 +1,41 @@
-# Backend code for event-loop
+# eventloop
 
-Visit [`CONTRIBUTING.md`](docs/CONTRIBUTING.md) for setup-help.
+Checkout [`CONTRIBUTING.md`](docs/CONTRIBUTING.md).
+See the frontend repo for eventloop: [`eventloop-frontend`](https://github.com/homebrew-ec-foss/eventloop-frontend)
+# How to run locally?
+Run locally or inside a docker container. If running locally enable `ELOOP_DEV=1` to expose some additional routes for testing.
+### Running as a container
 
-## Running in developement mode
-To run in development mode, set `ELOOP_DEV=1` in `data/.env`
+- Have docker installed [https://docs.docker.com/get-started/get-docker/](https://docs.docker.com/get-started/get-docker/)
+- the container works with a shared volume at `${PWD}/data`, ensure that the `config.json` is present there.
+- the `events.db` file will be present in the same shared volume, so clean the db with `make clean_db` target to work with a fresh database before running the container.
 
+```bash
+make build-container-image
+
+make run-container
+# this runs the container in DEV mode to expose few
+# routes for testing
+```
+### Running locally 
+```
+ELOOP_LOCAL=1 go run -v .
+```
+
+## HTTPS
+eventloop back-end uses an HTTP connection, you can either generate your own localhost certificates or use a proxy server like [mitmproxy](https://mitmproxy.org/)
+
+### Using a proxy server (Recommended)
+When running locally:
+```bash
+mitmproxy --mode reverse:http://localhost:8000@8080 --set ssl_insecure=true
+```
+When running inside docker container:
+```bash
+mitmproxy --mode reverse:http://localhost:8080@<port-no> --set ssl_insecure=true
+```
+You will have to update the frontend with the new `port-no`. Alternatively you can also,
 ### Regenerating localhost certificates
-
-> Necessary for https for go backend servers
-
 ```sh
 openssl req -x509 -out localhost.crt -keyout localhost.key \
   -newkey rsa:2048 -nodes -sha256 \
@@ -19,47 +46,21 @@ openssl req -x509 -out localhost.crt -keyout localhost.key \
 openssl pkcs12 -export -out localhost.pfx -inkey localhost.key -in localhost.crt
 ```
 
-## Running back-end as a container
-
-- have docker install [https://docs.docker.com/get-started/get-docker/](https://docs.docker.com/get-started/get-docker/)
-- the container works with a shared volume at `${PWD}/data`, so ensure that the `config.json` file is present there
-- the events.db file will be present in the same shared volume, so clean the db with `make clean_db` target to work with a fresh database before running the container.
-
-```bash
-make build-container-image
-
-make run-container
-# this runs the container in DEV mode to expose few
-# routes for testing
-```
-
-While working with the front-end and you are making use of a docker container, the container uses an http connection, for now u could a proxy server [mitmproxy](https://mitmproxy.org/), also this uses `https://localhost:8080` by default, so you can change the port exposed on the host side to be something else
-
-```bash
-mitmproxy --mode reverse:http://localhost:<whichever port you are using> --set ssl_insecure=true
-```
-
-## Regenerating Test QR's
-
-The test qr's work only with the `labels.csv`, generated with a specific env key at `event-loop-backend/.env`. Test QR's stored in `/test-data` of repository
-
-`handlers/authentication.go`
-
+Change the `r.Run()` function in [`main.go`](main.go) to
 ```go
-func GenerateQR(signedString string, i int) ([]byte, error) {
-	// -- snip --
-	err = qrcode.WriteFile(signedString, qrcode.Medium, 256, fmt.Sprintf("part-%d.png", i))
-	if err != nil {
-		return nil, err
-	}
-	// -- snip --
-}
+  if err := r.RunTLS(":8080", "localhost.crt", "localhost.key"); err != nil {
+	log.Fatal(err)
+  }
 ```
+# QR's
+QR codes for all participants are automatically generated when an event is created. QR's are stored in `../test-data/qr-png/` directory. To regenerate them just hit the `admin/create` endpoint with participant data again.
+# Mail
+eventloop has a mailer cli tool which will automatically send emails to all participating teams with their generated QR codes. Checkout [`README.md`](mail/README.md)
 
-
-## Deployment
+# Deployment
 
 - Run `docker compose up` in the directory containing `compose.yml`, with the
 application configuration(`config.json`) and environment variables(`.env`) in `./data`
 - Move nginx.conf to `/etc/nginx/nginx.conf`
 - Point domain to server and run certbot to generate SSL certificates
+

@@ -12,7 +12,7 @@ import (
 
 func main() {
 	isDevBuild := os.Getenv("ELOOP_DEV")
-	isHttpsServer := os.Getenv("ELOOP_HTTP")
+	isLocalBuild := os.Getenv("ELOOP_LOCAL")
 
 	app := handlers.InitializeAppWithConfig("./data/config.json")
 
@@ -91,14 +91,13 @@ func main() {
 		admin.POST("/add/volunteerMan", app.HandleVolunteerManual)
 	}
 
-	if isHttpsServer == "1" {
-		err := r.RunTLS(":8080", "localhost.crt", "localhost.key")
-		if err != nil {
+	 if isLocalBuild == "1" {
+		// assumes you are using a proxy server
+		if err := r.Run(":8000"); err != nil {
 			log.Fatal(err)
 		}
 	} else {
-		err := r.Run(":8080")
-		if err != nil {
+		if err := r.Run(":8080"); err != nil {
 			log.Fatal(err)
 		}
 	}
