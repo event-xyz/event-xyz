@@ -48,8 +48,7 @@ func main() {
 		r.PUT("/checkin", app.HandleCheckin)
 		r.PUT("/checkout", app.HandleCheckout)
 		r.PUT("/checkpoint", app.HandleCheckpoint)
-		r.POST("/add/volunteer", app.HandleVolunteers)
-		r.POST("/add/volunteerMan", app.HandleVolunteerManual)
+		r.POST("/add/volunteer/:method", app.HandleVolunteers)
 	}
 
 	// TODO: Handle checking by scanner
@@ -86,8 +85,7 @@ func main() {
 		admin.PUT("/checkin", app.HandleCheckin)
 		admin.PUT("/checkout", app.HandleCheckout)
 		admin.PUT("/checkpoint", app.HandleCheckpoint)
-		admin.POST("/add/volunteer", app.HandleVolunteers)
-		admin.POST("/add/volunteerMan", app.HandleVolunteerManual)
+		admin.POST("/add/volunteer/:method", app.HandleVolunteers)
 	}
 
 	 if isLocalBuild == "1" {

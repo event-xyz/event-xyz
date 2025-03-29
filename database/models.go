@@ -29,7 +29,7 @@ type DBAuthorisedUsers struct {
 	ID            int64  `gorm:"primaryKey;not null;autoIncrement" json:"-"`
 	SUB           string `json:"-"`
 	VerifiedEmail string `json:"email"`
-	UserRole      string `json:"-"`
+	UserRole      string `json:"UserRole"`
 	Name          string `json:"name"`
 	Phone         int64  `json:"phone"`
 

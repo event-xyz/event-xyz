@@ -466,6 +466,19 @@ func HandleParticipantUpdate(ctx *gin.Context) {
 }
 
 func (a *App) HandleVolunteers(ctx *gin.Context) {
+	method := ctx.Param("method")
+
+	switch(method) {
+	case "csv":
+		a.HandleVolunteersCsv(ctx)
+	case "manual":
+		a.HandleVolunteerManual(ctx)
+	default:
+		ctx.String(http.StatusBadRequest, "Error: No method specified")
+	}
+}
+
+func (a *App) HandleVolunteersCsv(ctx *gin.Context) {
 	file, err := ctx.FormFile("file")
 	if err != nil {
 		ctx.String(http.StatusBadRequest, "Error: No file uploaded")
