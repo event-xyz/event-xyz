@@ -1,0 +1,11 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: 'eventloop'
+    static_configs:
+      - targets: ['localhost:8080']  # eventloop.anirudhsudhir.com
+        labels:
+          service: 'eventloop'
+          environment: 'production'
