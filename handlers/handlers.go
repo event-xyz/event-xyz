@@ -13,7 +13,19 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/homebrew-ec-foss/eventloop/database"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
+
+// middleware for exposing Prometheus metrics
+func MetricsMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		registry := prometheus.NewRegistry()
+		handler := promhttp.HandlerFor(registry, promhttp.HandlerOpts{})
+		handler.ServeHTTP(c.Writer, c.Request)
+		c.Next()
+	}
+}
 
 func (a *App) HandleCreateTest(ctx *gin.Context) {
 	file, err := ctx.FormFile("file")
@@ -50,6 +62,14 @@ func (a *App) HandleCreateTest(ctx *gin.Context) {
 
 	csvReader := csv.NewReader(bytes.NewReader(content.Bytes()))
 	formData, err := csvReader.ReadAll()
+	if err != nil {
+		ctx.String(http.StatusInternalServerError, "Error: Failed to read CSV data")
+		return
+	}
+	if err != nil {
+		ctx.String(http.StatusInternalServerError, "Error: Failed to read CSV data")
+		return
+	}
 
 	formHeaders := formData[0]
 	formEntriesMap := make([]map[string]string, 0)
@@ -114,6 +134,10 @@ func (a *App) HandleCreate(ctx *gin.Context) {
 	// Reading csv to a 2-D slice
 	csvReader := csv.NewReader(bytes.NewReader(content.Bytes()))
 	formData, err := csvReader.ReadAll()
+	if err != nil {
+		ctx.String(http.StatusInternalServerError, "Error: Failed to read CSV data")
+		return
+	}
 
 	// TODO(FUTURE): do proper checks here for form headers
 	// check for validation of opinionated headers and
@@ -173,6 +197,7 @@ func (a *App) HandleCheckpoint(ctx *gin.Context) {
 	jwtClaims, err := a.GetClaimsInfo(data["jwt"].(string))
 	if err != nil && jwtClaims == nil {
 		log.Println("Invalid jwt")
+		a.Metrics.QRFailures.WithLabelValues("invalid_jwt").Inc()
 		ctx.JSON(
 			http.StatusBadRequest,
 			gin.H{"message": "Failed to pasrse JWT for the cliams. Seems like an invlaid QR"},
@@ -184,6 +209,7 @@ func (a *App) HandleCheckpoint(ctx *gin.Context) {
 
 	if jwtClaims == nil {
 		log.Println("Invalid JWT")
+		a.Metrics.QRFailures.WithLabelValues("nil_claims").Inc()
 		ctx.JSON(
 			http.StatusUnauthorized,
 			gin.H{"Error": "Invalid JWT"},
@@ -197,6 +223,7 @@ func (a *App) HandleCheckpoint(ctx *gin.Context) {
 	case database.ErrCheckpointCrossed:
 		{
 			log.Println(err)
+			a.Metrics.QRFailures.WithLabelValues("checkpoint_already_crossed").Inc()
 			ctx.JSON(
 				http.StatusBadRequest,
 				gin.H{"message": "The participant has already crossed the checkpoint"},
@@ -206,6 +233,7 @@ func (a *App) HandleCheckpoint(ctx *gin.Context) {
 	case database.ErrDbOpenFailure:
 		{
 			log.Println(err)
+			a.Metrics.DatabaseErrors.WithLabelValues("checkpoint", "open_failure").Inc()
 			ctx.JSON(
 				http.StatusInternalServerError,
 				gin.H{"message": "Database OP failed server side, contact operators"},
@@ -214,6 +242,7 @@ func (a *App) HandleCheckpoint(ctx *gin.Context) {
 		}
 	case database.ErrDbMissingRecord:
 		{
+			a.Metrics.QRFailures.WithLabelValues("missing_record").Inc()
 			ctx.JSON(
 				http.StatusBadRequest,
 				gin.H{
@@ -226,6 +255,7 @@ func (a *App) HandleCheckpoint(ctx *gin.Context) {
 		}
 	case database.ErrParticipantAbsent:
 		{
+			a.Metrics.QRFailures.WithLabelValues("never_checked_in").Inc()
 			ctx.JSON(
 				http.StatusBadRequest,
 				gin.H{"message": "Participant has never checked into the envet. Can't proceed with operation"},
@@ -235,6 +265,7 @@ func (a *App) HandleCheckpoint(ctx *gin.Context) {
 	case database.ErrParticipantLeft:
 		{
 			log.Println("Already left the event")
+			a.Metrics.QRFailures.WithLabelValues("already_left").Inc()
 			ctx.JSON(
 				http.StatusBadRequest,
 				gin.H{"message": "Participant has left the event. Can't proceed with operation"},
@@ -283,6 +314,7 @@ func (a *App) HandleCheckin(ctx *gin.Context) {
 	jwtClaims, err := a.GetClaimsInfo(data["jwt"].(string))
 	if err != nil && jwtClaims == nil {
 		log.Println("Invalid jwt")
+		a.Metrics.QRFailures.WithLabelValues("invalid_jwt").Inc()
 		ctx.JSON(
 			http.StatusBadRequest,
 			gin.H{"message": "Failed to pasrse JWT for the cliams. Seems like an invlaid QR"},
@@ -297,6 +329,7 @@ func (a *App) HandleCheckin(ctx *gin.Context) {
 	case database.ErrDbOpenFailure:
 		{
 			log.Println(err)
+			a.Metrics.DatabaseErrors.WithLabelValues("checkin", "open_failure").Inc()
 			ctx.JSON(
 				http.StatusInternalServerError,
 				gin.H{"message": "Database OP failed server side, contact operators"},
@@ -305,6 +338,7 @@ func (a *App) HandleCheckin(ctx *gin.Context) {
 		}
 	case database.ErrDbMissingRecord:
 		{
+			a.Metrics.QRFailures.WithLabelValues("missing_record").Inc()
 			ctx.JSON(
 				http.StatusBadRequest,
 				gin.H{
@@ -317,12 +351,22 @@ func (a *App) HandleCheckin(ctx *gin.Context) {
 		}
 	case database.ErrParticipantLeft:
 		{
+			a.Metrics.QRFailures.WithLabelValues("already_left").Inc()
 			ctx.JSON(
 				http.StatusBadRequest,
 				gin.H{"message": "Participant has left the event. Can't proceed with operation"},
 			)
 			return
 		}
+	}
+
+	// If check-in was successful, increment metrics
+	if checkin {
+		team := jwtClaims["team"].(string) // Assuming "team" is part of the JWT claims
+		a.Metrics.ParticipantsCheckedIn.WithLabelValues(team).Inc()
+// 
+		// Update active participants gauge
+		a.Metrics.ParticipantsActive.Inc()
 	}
 
 	// Respond to the client
@@ -377,6 +421,7 @@ func (a *App) HandleCheckout(ctx *gin.Context) {
 	case database.ErrDbOpenFailure:
 		{
 			log.Println(err)
+			a.Metrics.DatabaseErrors.WithLabelValues("checkout", "open_failure").Inc()
 			ctx.JSON(
 				http.StatusInternalServerError,
 				gin.H{"message": "Database OP failed server side, contact operators"},
@@ -385,8 +430,9 @@ func (a *App) HandleCheckout(ctx *gin.Context) {
 		}
 	case database.ErrDbMissingRecord:
 		{
+			a.Metrics.QRFailures.WithLabelValues("missing_record").Inc()
 			ctx.JSON(
-				http.StatusBadRequest,
+				http.StatusBadRequest, 
 				gin.H{"message": "The QR might not be accurate", "checkin": false, "operation": true},
 			)
 			return
@@ -394,8 +440,9 @@ func (a *App) HandleCheckout(ctx *gin.Context) {
 	case database.ErrParticipantAbsent:
 		{
 			log.Println("The guy never came!")
+			a.Metrics.QRFailures.WithLabelValues("never_checked_in").Inc()
 			ctx.JSON(
-				http.StatusBadRequest,
+				http.StatusBadRequest, 
 				gin.H{"message": "Participant has never checked into the envet. Can't proceed with operation"},
 			)
 			return
@@ -403,13 +450,15 @@ func (a *App) HandleCheckout(ctx *gin.Context) {
 	case database.ErrParticipantLeft:
 		{
 			log.Println("The guy left off -_-!")
+			a.Metrics.QRFailures.WithLabelValues("already_left").Inc()
 			ctx.JSON(
-				http.StatusBadRequest,
+				http.StatusBadRequest, 
 				gin.H{"message": "Participant has already left the event. Can't proceed with operation"},
 			)
 			return
 		}
 	}
+
 
 	// Respond to the client
 	ctx.JSON(
@@ -569,6 +618,7 @@ func (a *App) HandleLogin(ctx *gin.Context) {
 
 	dbAuthUser, err := a.Store.VerifyLogin(incomingUserReq)
 	if err != nil {
+		a.Metrics.AuthFailures.WithLabelValues(incomingUserReq.UserRole, "login_failure").Inc()
 		ctx.JSON(
 			http.StatusInternalServerError,
 			gin.H{

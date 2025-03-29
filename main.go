@@ -7,9 +7,11 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/homebrew-ec-foss/eventloop/handlers"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 func main() {
+	// dev stuff
 	isDevBuild := os.Getenv("ELOOP_DEV")
 	isLocalBuild := os.Getenv("ELOOP_LOCAL")
 
@@ -17,7 +19,12 @@ func main() {
 
 	r := gin.Default()
 	r.Use(handlers.CorsMiddleware())
+	r.Use(app.MetricsMiddleware())
 
+	// Prometheus metrics endpoint
+	r.GET("/metrics", gin.WrapH(promhttp.Handler()))
+
+	// Health check endpoint
 	r.GET("/ping", func(ctx *gin.Context) {
 		ctx.String(http.StatusOK, "pong")
 	})

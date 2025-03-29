@@ -3,6 +3,7 @@ package handlers
 import (
 	"log"
 	"os"
+	"time"
 
 	"github.com/homebrew-ec-foss/eventloop/database"
 	"github.com/joho/godotenv"
@@ -16,10 +17,12 @@ type Config struct {
 }
 
 type App struct {
-	Store  *database.EventDB
-	Logger *log.Logger
-	Config Config
-	Env    Env
+	Store    *database.EventDB
+	Logger   *log.Logger
+	Config   Config
+	Env      Env
+	Metrics  *PrometheusMetrics
+	AppStart time.Time
 }
 
 func InitializeMockApp(dbpath string, secretPair MockEnvPair) *App {
@@ -32,14 +35,19 @@ func InitializeMockApp(dbpath string, secretPair MockEnvPair) *App {
 	}
 	mockEnv.Setenv(secretPair)
 
-	return &App{
-		Store:  db,
-		Logger: log.New(os.Stderr, "LOG\t", log.Ldate|log.Ltime|log.Lshortfile),
-		Config: Config{
+	app := &App{
+		Store:    db,
+		Logger:   log.New(os.Stderr, "LOG\t", log.Ldate|log.Ltime|log.Lshortfile),
+		Config:   Config{
 			DbPath: dbpath,
 		},
-		Env: &mockEnv,
+		Env:      &mockEnv,
+		Metrics:  prom(),
+		AppStart: time.Now(),
 	}
+
+	app.InitializeMetrics()
+	return app
 }
 
 func InitializeAppWithConfig(configPath string) *App {
@@ -70,10 +78,15 @@ func InitializeAppWithConfig(configPath string) *App {
 		log.Fatalln("[MAIN] failed to run InitializeDB")
 	}
 
-	return &App{
-		Store:  db,
-		Logger: log.New(os.Stderr, "LOG\t", log.Ldate|log.Ltime|log.Lshortfile),
-		Config: config,
-		Env:    &OsEnv{},
+	app := &App{
+		Store:    db,
+		Logger:   log.New(os.Stderr, "LOG\t", log.Ldate|log.Ltime|log.Lshortfile),
+		Config:   config,
+		Env:      &OsEnv{},
+		Metrics:  prom(),
+		AppStart: time.Now(),
 	}
+
+	app.InitializeMetrics()
+	return app
 }
