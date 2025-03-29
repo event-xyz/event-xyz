@@ -1,4 +1,5 @@
 {
   "envPath": "./data/.env",
-  "dbPath": "./data/events.db"
+  "dbPath": "./data/events.db",
+  "qrPath": "../shared/"
 }

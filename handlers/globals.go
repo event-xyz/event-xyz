@@ -12,6 +12,7 @@ import (
 type Config struct {
 	EnvPath string
 	DbPath  string
+	QrPath  string
 }
 
 type App struct {
@@ -53,6 +54,10 @@ func InitializeAppWithConfig(configPath string) *App {
 	err = json.Unmarshal(buf, &config)
 	if err != nil {
 		log.Fatalln(err)
+	}
+
+	if config.QrPath == "" {
+		config.QrPath = "../shared/"
 	}
 
 	err = godotenv.Load(config.EnvPath)

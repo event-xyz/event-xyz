@@ -138,18 +138,18 @@ func (a *App) GetClaimsInfo(rawtoken string) (map[string]interface{}, error) {
 }
 
 // TODO: cleanup arguments for GenerateQR
-func GenerateQR(signedString, participantName string, teamName string, leaderEmail string, uuid string) ([]byte, error) {
+func (a *App) GenerateQR(signedString, participantName string, teamName string, leaderEmail string, uuid string) ([]byte, error) {
 	var png []byte
 	png, err := qrcode.Encode(signedString, qrcode.Low, 256)
 	if err != nil {
 		return nil, err
 	}
 
-	if err = os.MkdirAll("../test-data/qr-png/", 0750); err != nil {
+	if err = os.MkdirAll(a.Config.QrPath, 0750); err != nil {
 		log.Println(err)
 	}
 
-	qrFileName := fmt.Sprintf("../test-data/qr-png/%s-%s-%s-%s.png", leaderEmail, teamName, participantName, uuid)
+	qrFileName := fmt.Sprintf("%s%s-%s-%s-%s.png", a.Config.QrPath, leaderEmail, teamName, participantName, uuid)
 	err = qrcode.WriteFile(signedString, qrcode.Medium, 256, qrFileName)
 	if err != nil {
 		return nil, err
