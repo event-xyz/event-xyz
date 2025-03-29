@@ -1,6 +1,6 @@
 services:
   eventloop:
-    image: anirudhsudhir/eventloop:0.0.1-beta
+    image: anirudhsudhir/eventloop:1.0.0
     ports:
       - "8080:8080"
     volumes:
