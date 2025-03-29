@@ -1,4 +1,3 @@
-// deadline: in 2-weeks Infinite
 package main
 
 import (
