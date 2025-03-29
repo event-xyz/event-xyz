@@ -65,7 +65,7 @@ func TryInitializeDB(dbpath string) (*EventDB, error) {
 		log.Fatalln("Failed to migrate db DBParticipant")
 	}
 
-	err = db.AutoMigrate(&DBAuthoriesedUsers{})
+	err = db.AutoMigrate(&DBAuthorisedUsers{})
 	if err != nil {
 		log.Fatalln("Failed to migrate db DBAuthoriesedUsers")
 	}
@@ -170,7 +170,7 @@ func (e *EventDB) CreateParticipant(
 	return err
 }
 
-func (e *EventDB) CreateVolunteer(volunteer *DBAuthoriesedUsers) error {
+func (e *EventDB) CreateVolunteer(volunteer *DBAuthorisedUsers) error {
 	db, err := e.openDB()
 	if err != nil {
 		return err
@@ -192,8 +192,7 @@ func (e *EventDB) CreateVolunteer(volunteer *DBAuthoriesedUsers) error {
 // if no rows were affected this means that
 // all three (name, phone and email) were wrong.
 // send a warning to the frontend by setting success as 0.
-func (e *EventDB) CreateVolunteerManual(volunteer *DBAuthoriesedUsers) (int, error) {
-
+func (e *EventDB) CreateVolunteerManual(volunteer *DBAuthorisedUsers) (int, error) {
 	// Initially set success as 1
 	success := 1
 
@@ -203,10 +202,9 @@ func (e *EventDB) CreateVolunteerManual(volunteer *DBAuthoriesedUsers) (int, err
 	}
 
 	err = db.Transaction(func(tx *gorm.DB) error {
-
 		result := tx.Where("name = ? OR phone = ? OR verified_email = ?",
 			volunteer.Name, volunteer.Phone, volunteer.VerifiedEmail).
-			Delete(&DBAuthoriesedUsers{})
+			Delete(&DBAuthorisedUsers{})
 
 		if result.RowsAffected == 0 {
 			success = 0
@@ -220,7 +218,6 @@ func (e *EventDB) CreateVolunteerManual(volunteer *DBAuthoriesedUsers) (int, err
 
 		return nil
 	})
-
 	if err != nil {
 		return 0, err
 	}
@@ -234,7 +231,7 @@ func (e *EventDB) CreateAuthorisedUsersDB() error {
 		return ErrDbOpenFailure
 	}
 
-	var dbAuth []DBAuthoriesedUsers
+	var dbAuth []DBAuthorisedUsers
 
 	db.Create(&dbAuth)
 
@@ -251,7 +248,7 @@ func FetchCheckpoints() []string {
 	return checkpoints
 }
 
-func (e *EventDB) VerifyLogin(userDetails DBAuthoriesedUsers) (*DBAuthoriesedUsers, error) {
+func (e *EventDB) VerifyLogin(userDetails DBAuthorisedUsers) (*DBAuthorisedUsers, error) {
 	db, err := e.openDB()
 	if err != nil {
 		return nil, ErrDbOpenFailure
@@ -259,7 +256,7 @@ func (e *EventDB) VerifyLogin(userDetails DBAuthoriesedUsers) (*DBAuthoriesedUse
 
 	log.Println("request: ", userDetails)
 
-	var dbAuthUser DBAuthoriesedUsers
+	var dbAuthUser DBAuthorisedUsers
 	_ = db.First(&dbAuthUser, "sub = ?", userDetails.SUB)
 
 	if dbAuthUser.VerifiedEmail == "" {
@@ -294,13 +291,13 @@ func (e *EventDB) VerifyLogin(userDetails DBAuthoriesedUsers) (*DBAuthoriesedUse
 	return &dbAuthUser, nil
 }
 
-func (e *EventDB) SubAuthentication(sub string, userRole string) (*DBAuthoriesedUsers, error) {
+func (e *EventDB) SubAuthentication(sub string, userRole string) (*DBAuthorisedUsers, error) {
 	db, err := e.openDB()
 	if err != nil {
 		return nil, ErrDbOpenFailure
 	}
 
-	var dbAuthUser DBAuthoriesedUsers
+	var dbAuthUser DBAuthorisedUsers
 	_ = db.First(&dbAuthUser, "sub = ?", sub)
 
 	if dbAuthUser.VerifiedEmail == "" {
@@ -335,7 +332,6 @@ func (e *EventDB) FetchParticipant(name string, phone string) (*Participant, err
 	var participant Participant
 
 	err = db.Transaction(func(tx *gorm.DB) error {
-
 		_ = tx.First(&participant, "name = ? and phone = ?", name, phone)
 		log.Println(participant)
 
@@ -345,12 +341,10 @@ func (e *EventDB) FetchParticipant(name string, phone string) (*Participant, err
 
 		return nil
 	})
-
 	if err != nil {
 		return nil, err
 	}
 	return &participant, err
-
 }
 
 // Update DB with the participant entry checkpoint

@@ -427,7 +427,7 @@ func (a *App) HandleLogin(ctx *gin.Context) {
 
 	// dbAuthUser, err := database.VerifyLogin(int64(strconv.Itoa(requestBody["sub"].(string))),requestBody["email"].(string))
 
-	incomingUserReq := database.DBAuthoriesedUsers{
+	incomingUserReq := database.DBAuthorisedUsers{
 		VerifiedEmail: requestBody["email"].(string),
 		SUB:           requestBody["sub"].(string),
 	}
@@ -515,7 +515,6 @@ func (a *App) HandleVolunteers(ctx *gin.Context) {
 }
 
 func (a *App) HandleVolunteerManual(ctx *gin.Context) {
-
 	name := ctx.PostForm("name")
 	email := ctx.PostForm("email")
 	phone := ctx.PostForm("phone")

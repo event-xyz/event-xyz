@@ -1,4 +1,4 @@
 {
-  "envPath": "/app/data/.env",
-  "dbPath": "/app/data/events.db"
+  "envPath": "./data/.env",
+  "dbPath": "./data/events.db"
 }

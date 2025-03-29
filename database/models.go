@@ -25,7 +25,7 @@ const (
 //   - admain
 //   - organizers
 //   - volunteers
-type DBAuthoriesedUsers struct {
+type DBAuthorisedUsers struct {
 	ID            int64  `gorm:"primaryKey;not null;autoIncrement" json:"-"`
 	SUB           string `json:"-"`
 	VerifiedEmail string `json:"email"`

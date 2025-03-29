@@ -3,7 +3,7 @@
 Visit [`CONTRIBUTING.md`](docs/CONTRIBUTING.md) for setup-help.
 
 ## Running in developement mode
-To run in development mode add `ELOOP_DEV=1` in `.env`
+To run in development mode, set `ELOOP_DEV=1` in `data/.env`
 
 ### Regenerating localhost certificates
 
@@ -60,6 +60,6 @@ func GenerateQR(signedString string, i int) ([]byte, error) {
 ## Deployment
 
 - Run `docker compose up` in the directory containing `compose.yml`, with the
-application configuration in `./data`
+application configuration(`config.json`) and environment variables(`.env`) in `./data`
 - Move nginx.conf to `/etc/nginx/nginx.conf`
 - Point domain to server and run certbot to generate SSL certificates

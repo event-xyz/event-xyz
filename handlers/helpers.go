@@ -159,7 +159,6 @@ func (a *App) handleApplicationJson(ctx *gin.Context, userRole string) {
 
 func (a *App) AuthenticationMiddleware(userRole string) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-
 		contType := strings.Split(ctx.Request.Header.Get("Content-Type"), ";")[0]
 		log.Println("req content type", contType)
 
@@ -231,8 +230,8 @@ func (a *App) ParseParticipants(db *gorm.DB, teamRecords []map[string]string) (*
 	return &participants, nil
 }
 
-func (a *App) ParseVolunteers(db *gorm.DB, volunteerRecords []map[string]string) (*[]database.DBAuthoriesedUsers, error) {
-	volunteers := []database.DBAuthoriesedUsers{}
+func (a *App) ParseVolunteers(db *gorm.DB, volunteerRecords []map[string]string) (*[]database.DBAuthorisedUsers, error) {
+	volunteers := []database.DBAuthorisedUsers{}
 
 	for _, record := range volunteerRecords {
 
@@ -246,7 +245,7 @@ func (a *App) ParseVolunteers(db *gorm.DB, volunteerRecords []map[string]string)
 			return nil, err
 		}
 
-		volunteer := database.DBAuthoriesedUsers{
+		volunteer := database.DBAuthorisedUsers{
 			Name:          name,
 			VerifiedEmail: email,
 			Phone:         phone,
@@ -265,8 +264,8 @@ func (a *App) ParseVolunteers(db *gorm.DB, volunteerRecords []map[string]string)
 	return &volunteers, nil
 }
 
-func (a *App) ParseVolunteerManual(db *gorm.DB, name, email, phoneStr string) (int, *[]database.DBAuthoriesedUsers, error) {
-	volunteers := []database.DBAuthoriesedUsers{}
+func (a *App) ParseVolunteerManual(db *gorm.DB, name, email, phoneStr string) (int, *[]database.DBAuthorisedUsers, error) {
+	volunteers := []database.DBAuthorisedUsers{}
 
 	phone, err := strconv.ParseInt(phoneStr, 10, 64)
 	if err != nil {
@@ -274,7 +273,7 @@ func (a *App) ParseVolunteerManual(db *gorm.DB, name, email, phoneStr string) (i
 		return 0, nil, err
 	}
 
-	volunteer := database.DBAuthoriesedUsers{
+	volunteer := database.DBAuthorisedUsers{
 		Name:          name,
 		VerifiedEmail: email,
 		Phone:         phone,
