@@ -1,10 +1,10 @@
 DBPATH=${PWD}/tmp
-HOST_DB_PATH="./tmp/events.db"
+HOST_DB_PATH="./data/events.db"
 
 build-container-image:
 	docker build -t eventloop .
 run-container:
-	docker run --rm -e ELOOP_DEV=1 -p 8080:8080 -v ${PWD}/data:/app/data/ eventloop
+	docker run --rm -e ELOOP_DEV=1 -p 7070:8080 -v ${PWD}/data:/app/data/ eventloop
 
 clean_db:
 	-rm ./data/*.db

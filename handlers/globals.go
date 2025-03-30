@@ -1,18 +1,18 @@
 package handlers
 
 import (
-	"encoding/json"
 	"log"
 	"os"
 
 	"github.com/homebrew-ec-foss/eventloop/database"
 	"github.com/joho/godotenv"
+	"gopkg.in/yaml.v3"
 )
 
 type Config struct {
-	EnvPath string
-	DbPath  string
-	QrPath  string
+	EnvPath string `yaml:"envPath"`
+	DbPath  string `yaml:"dbPath"`
+	QrPath  string `yaml:"qrPath"`
 }
 
 type App struct {
@@ -48,10 +48,10 @@ func InitializeAppWithConfig(configPath string) *App {
 
 	buf, err := os.ReadFile(configPath)
 	if err != nil {
-		log.Fatalln(err)
+		log.Fatalln("failed to load config file: ", err)
 	}
 
-	err = json.Unmarshal(buf, &config)
+	err = yaml.Unmarshal(buf, &config)
 	if err != nil {
 		log.Fatalln(err)
 	}
@@ -62,7 +62,7 @@ func InitializeAppWithConfig(configPath string) *App {
 
 	err = godotenv.Load(config.EnvPath)
 	if err != nil {
-		log.Fatalln(err)
+		log.Fatalln("failed to open env file: ", err)
 	}
 
 	db, err := database.TryInitializeDB(config.DbPath)

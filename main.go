@@ -13,7 +13,7 @@ func main() {
 	isDevBuild := os.Getenv("ELOOP_DEV")
 	isLocalBuild := os.Getenv("ELOOP_LOCAL")
 
-	app := handlers.InitializeAppWithConfig("./data/config.json")
+	app := handlers.InitializeAppWithConfig("./data/config.yaml")
 
 	r := gin.Default()
 	r.Use(handlers.CorsMiddleware())
@@ -88,7 +88,7 @@ func main() {
 		admin.POST("/add/volunteer/:method", app.HandleVolunteers)
 	}
 
-	 if isLocalBuild == "1" {
+	if isLocalBuild == "1" {
 		// assumes you are using a proxy server
 		if err := r.Run(":8000"); err != nil {
 			log.Fatal(err)

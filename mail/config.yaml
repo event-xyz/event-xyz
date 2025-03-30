@@ -1,5 +1,5 @@
 unsent_log: "unsent.log"
-attachment_path: "../shared"
+attachment_path: "../data/qr"
 extension: ".png"
 port_no: 587
 sendfile_path: ""

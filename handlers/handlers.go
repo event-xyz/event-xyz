@@ -18,13 +18,19 @@ import (
 func (a *App) HandleCreateTest(ctx *gin.Context) {
 	file, err := ctx.FormFile("file")
 	if err != nil {
-		ctx.String(http.StatusBadRequest, "Error: No file uploaded")
+		ctx.String(
+			http.StatusBadRequest,
+			"Error: No file uploaded",
+		)
 		return
 	}
 
 	fileContent, err := file.Open()
 	if err != nil {
-		ctx.String(http.StatusInternalServerError, "Error: Failed to open file")
+		ctx.String(
+			http.StatusInternalServerError,
+			"Error: Failed to open file",
+		)
 		return
 	}
 
@@ -35,7 +41,10 @@ func (a *App) HandleCreateTest(ctx *gin.Context) {
 
 	_, err = io.Copy(&content, reader)
 	if err != nil {
-		ctx.String(http.StatusInternalServerError, "Error: Failed to read file")
+		ctx.String(
+			http.StatusInternalServerError,
+			"Error: Failed to read file",
+		)
 		return
 	}
 
@@ -55,10 +64,16 @@ func (a *App) HandleCreateTest(ctx *gin.Context) {
 
 	participants, err := a.ParseParticipants(a.Store.Db, formEntriesMap)
 	if err != nil {
-		ctx.String(http.StatusInternalServerError, "Error: Failed to write records to database")
+		ctx.String(
+			http.StatusInternalServerError,
+			"Error: Failed to write records to database",
+		)
 	}
 
-	ctx.JSON(http.StatusOK, gin.H{"data": participants})
+	ctx.JSON(
+		http.StatusOK,
+		gin.H{"data": participants},
+	)
 }
 
 // TODO:
@@ -68,13 +83,19 @@ func (a *App) HandleCreateTest(ctx *gin.Context) {
 func (a *App) HandleCreate(ctx *gin.Context) {
 	file, err := ctx.FormFile("file")
 	if err != nil {
-		ctx.String(http.StatusBadRequest, "Error: No file uploaded")
+		ctx.String(
+			http.StatusBadRequest,
+			"Error: No file uploaded",
+		)
 		return
 	}
 
 	fileContent, err := file.Open()
 	if err != nil {
-		ctx.String(http.StatusInternalServerError, "Error: Failed to open file")
+		ctx.String(
+			http.StatusInternalServerError,
+			"Error: Failed to open file",
+		)
 		return
 	}
 	defer fileContent.Close()
@@ -83,7 +104,10 @@ func (a *App) HandleCreate(ctx *gin.Context) {
 	content := bytes.Buffer{}
 	_, err = io.Copy(&content, reader)
 	if err != nil {
-		ctx.String(http.StatusInternalServerError, "Error: Failed to read file")
+		ctx.String(
+			http.StatusInternalServerError,
+			"Error: Failed to read file",
+		)
 		return
 	}
 
@@ -111,21 +135,16 @@ func (a *App) HandleCreate(ctx *gin.Context) {
 	// Parsing the csv to a slice of Participants struct
 	participants, err := a.ParseParticipants(a.Store.Db, formEntriesMap)
 	if err != nil {
-		ctx.String(http.StatusInternalServerError, "Error: Failed to write records to the database")
+		ctx.String(
+			http.StatusInternalServerError,
+			"Error: Failed to write records to the database",
+		)
 	}
 
-	// Converting Participant structs to DBPartictipants
-	// Performing JWT and QR generation and embedding 'Checkpoints' struct
-	// dbParticipants, err := CreateDBParticipants(participants)
-	// log.Println(dbParticipants)
-
-	// Writing records to DB
-	// err = database.CreateParticipants(dbParticipants)
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-
-	ctx.JSON(http.StatusOK, gin.H{"data": participants})
+	ctx.JSON(
+		http.StatusOK,
+		gin.H{"data": participants},
+	)
 }
 
 // Handler receives the JWT and manages checkpoint(Eg: Dinner) updates
@@ -133,7 +152,10 @@ func (a *App) HandleCheckpoint(ctx *gin.Context) {
 	// Read the request body
 	body, err := io.ReadAll(ctx.Request.Body)
 	if err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"Error": "Failed to read request body"})
+		ctx.JSON(
+			http.StatusBadRequest,
+			gin.H{"Error": "Failed to read request body"},
+		)
 		return
 	}
 	log.Println("QR code content received:", string(body))
@@ -141,14 +163,20 @@ func (a *App) HandleCheckpoint(ctx *gin.Context) {
 	var data map[string]interface{}
 	err = json.Unmarshal(body, &data)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"Error": "Failed to parse JSON"})
+		ctx.JSON(
+			http.StatusInternalServerError,
+			gin.H{"Error": "Failed to parse JSON"},
+		)
 		return
 	}
 
 	jwtClaims, err := a.GetClaimsInfo(data["jwt"].(string))
 	if err != nil && jwtClaims == nil {
 		log.Println("Invalid jwt")
-		ctx.JSON(http.StatusBadRequest, gin.H{"message": "Failed to pasrse JWT for the cliams. Seems like an invlaid QR"})
+		ctx.JSON(
+			http.StatusBadRequest,
+			gin.H{"message": "Failed to pasrse JWT for the cliams. Seems like an invlaid QR"},
+		)
 		return
 	}
 
@@ -156,55 +184,75 @@ func (a *App) HandleCheckpoint(ctx *gin.Context) {
 
 	if jwtClaims == nil {
 		log.Println("Invalid JWT")
-		ctx.JSON(http.StatusUnauthorized, gin.H{"Error": "Invalid JWT"})
+		ctx.JSON(
+			http.StatusUnauthorized,
+			gin.H{"Error": "Invalid JWT"},
+		)
 		return
 	}
-	log.Println("JWT claims:", jwtClaims)
 
-	dbParticipant, participant, checkpoint, checkpointCleared, err := a.Store.ParticipantCheckpoint(jwtClaims["UUID"].(string), checkpointName)
-	log.Println(dbParticipant, checkpointCleared, err)
+	dbParticipant, checkpointCleared, err := a.Store.ParticipantCheckpoint(jwtClaims["UUID"].(string), checkpointName)
 
 	switch err {
 	case database.ErrCheckpointCrossed:
 		{
 			log.Println(err)
-			ctx.JSON(http.StatusInternalServerError, gin.H{"message": "The participant has already crossed the checkpoint"})
+			ctx.JSON(
+				http.StatusBadRequest,
+				gin.H{"message": "The participant has already crossed the checkpoint"},
+			)
 			return
 		}
 	case database.ErrDbOpenFailure:
 		{
 			log.Println(err)
-			ctx.JSON(http.StatusInternalServerError, gin.H{"message": "Database OP failed server side, contact operators"})
+			ctx.JSON(
+				http.StatusInternalServerError,
+				gin.H{"message": "Database OP failed server side, contact operators"},
+			)
 			return
 		}
 	case database.ErrDbMissingRecord:
 		{
-			ctx.JSON(http.StatusBadRequest, gin.H{"message": "The QR might not be accurate", "checkpointCleared": false, "operation": true})
+			ctx.JSON(
+				http.StatusBadRequest,
+				gin.H{
+					"message":           "The QR might not be accurate",
+					"checkpointCleared": false,
+					"operation":         true,
+				},
+			)
 			return
 		}
 	case database.ErrParticipantAbsent:
 		{
-			ctx.JSON(http.StatusBadRequest, gin.H{"message": "Participant has never checked into the envet. Can't proceed with operation"})
+			ctx.JSON(
+				http.StatusBadRequest,
+				gin.H{"message": "Participant has never checked into the envet. Can't proceed with operation"},
+			)
 			return
 		}
 	case database.ErrParticipantLeft:
 		{
 			log.Println("Already left the event")
-			ctx.JSON(http.StatusBadRequest, gin.H{"message": "Participant has left the event. Can't proceed with operation"})
+			ctx.JSON(
+				http.StatusBadRequest,
+				gin.H{"message": "Participant has left the event. Can't proceed with operation"},
+			)
 			return
 		}
 	}
 
-	participantCheckinInfo := ParticipantCheckpointInfo{
-		*participant,
-		*checkpoint,
-	}
-
-	log.Println(participantCheckinInfo)
-
 	// Respond to the client
-	// ctx.JSON(http.StatusOK, gin.H{"message": "QR code content received successfully", "claims": jwtClaims})
-	ctx.JSON(http.StatusOK, gin.H{"message": "QR code parsed sucessfully and operation sucessful", "checkpointCleared": checkpointCleared, "operation": true, "dbParticipant": participantCheckinInfo})
+	ctx.JSON(
+		http.StatusOK,
+		gin.H{
+			"message":           "QR code parsed sucessfully and operation sucessful",
+			"checkpointCleared": checkpointCleared,
+			"operation":         true,
+			"dbParticipant":     dbParticipant,
+		},
+	)
 }
 
 // Handler receives the JWT and manages event enrty updates
@@ -213,7 +261,10 @@ func (a *App) HandleCheckin(ctx *gin.Context) {
 	body, err := io.ReadAll(ctx.Request.Body)
 	if err != nil {
 		log.Println(err)
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Failed to read request body"})
+		ctx.JSON(
+			http.StatusBadRequest,
+			gin.H{"error": "Failed to read request body"},
+		)
 		return
 	}
 	log.Println("QR code content received:", string(body))
@@ -221,7 +272,10 @@ func (a *App) HandleCheckin(ctx *gin.Context) {
 	var data map[string]interface{}
 	err = json.Unmarshal(body, &data)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse JSON"})
+		ctx.JSON(
+			http.StatusInternalServerError,
+			gin.H{"error": "Failed to parse JSON"},
+		)
 		return
 	}
 
@@ -229,39 +283,58 @@ func (a *App) HandleCheckin(ctx *gin.Context) {
 	jwtClaims, err := a.GetClaimsInfo(data["jwt"].(string))
 	if err != nil && jwtClaims == nil {
 		log.Println("Invalid jwt")
-		ctx.JSON(http.StatusBadRequest, gin.H{"message": "Failed to pasrse JWT for the cliams. Seems like an invlaid QR"})
+		ctx.JSON(
+			http.StatusBadRequest,
+			gin.H{"message": "Failed to pasrse JWT for the cliams. Seems like an invlaid QR"},
+		)
 		return
 	}
 
 	// Querying DB for participant and updating with entry
-	_, participant, checkpoint, checkin, err := a.Store.ParticipantEntry(jwtClaims["UUID"].(string))
+	dbParticipant, checkin, err := a.Store.ParticipantEntry(jwtClaims["UUID"].(string))
 
 	switch err {
 	case database.ErrDbOpenFailure:
 		{
 			log.Println(err)
-			ctx.JSON(http.StatusInternalServerError, gin.H{"message": "Database OP failed server side, contact operators"})
+			ctx.JSON(
+				http.StatusInternalServerError,
+				gin.H{"message": "Database OP failed server side, contact operators"},
+			)
 			return
 		}
 	case database.ErrDbMissingRecord:
 		{
-			ctx.JSON(http.StatusBadRequest, gin.H{"message": "The QR might not be accurate", "checkin": false, "operation": true})
+			ctx.JSON(
+				http.StatusBadRequest,
+				gin.H{
+					"message":   "The QR might not be accurate",
+					"checkin":   false,
+					"operation": true,
+				},
+			)
 			return
 		}
 	case database.ErrParticipantLeft:
 		{
-			ctx.JSON(http.StatusBadRequest, gin.H{"message": "Participant has left the event. Can't proceed with operation"})
+			ctx.JSON(
+				http.StatusBadRequest,
+				gin.H{"message": "Participant has left the event. Can't proceed with operation"},
+			)
 			return
 		}
 	}
 
-	participantCheckinInfo := ParticipantCheckpointInfo{
-		*participant,
-		*checkpoint,
-	}
-
 	// Respond to the client
-	ctx.JSON(http.StatusOK, gin.H{"message": "QR JWT parsed and db operation was sucessful", "checkin": checkin, "operation": true, "dbParticipant": participantCheckinInfo})
+	ctx.JSON(
+		http.StatusOK,
+		gin.H{
+			"message":       "QR JWT parsed and db operation was sucessful",
+			"checkin":       checkin,
+			"operation":     true,
+			"dbParticipant": dbParticipant,
+		},
+	)
 	return
 }
 
@@ -288,43 +361,66 @@ func (a *App) HandleCheckout(ctx *gin.Context) {
 
 	if err != nil && jwtClaims == nil {
 		log.Println("Invalid jwt")
-		ctx.JSON(http.StatusBadRequest, gin.H{"message": "Failed to pasrse JWT for the cliams. Seems like an invlaid QR"})
+		ctx.JSON(
+			http.StatusBadRequest,
+			gin.H{"message": "Failed to pasrse JWT for the cliams. Seems like an invlaid QR"},
+		)
 		return
 	}
 
 	log.Println(jwtClaims)
 
 	// Querying DB for participant and updating with entry
-	dbParticipant, _, _, checkout, err := a.Store.ParticipantExit(jwtClaims["UUID"].(string))
+	dbParticipant, checkout, err := a.Store.ParticipantExit(jwtClaims["UUID"].(string))
 
 	switch err {
 	case database.ErrDbOpenFailure:
 		{
 			log.Println(err)
-			ctx.JSON(http.StatusInternalServerError, gin.H{"message": "Database OP failed server side, contact operators"})
+			ctx.JSON(
+				http.StatusInternalServerError,
+				gin.H{"message": "Database OP failed server side, contact operators"},
+			)
 			return
 		}
 	case database.ErrDbMissingRecord:
 		{
-			ctx.JSON(http.StatusBadRequest, gin.H{"message": "The QR might not be accurate", "checkin": false, "operation": true})
+			ctx.JSON(
+				http.StatusBadRequest,
+				gin.H{"message": "The QR might not be accurate", "checkin": false, "operation": true},
+			)
 			return
 		}
 	case database.ErrParticipantAbsent:
 		{
 			log.Println("The guy never came!")
-			ctx.JSON(http.StatusBadRequest, gin.H{"message": "Participant has never checked into the envet. Can't proceed with operation"})
+			ctx.JSON(
+				http.StatusBadRequest,
+				gin.H{"message": "Participant has never checked into the envet. Can't proceed with operation"},
+			)
 			return
 		}
 	case database.ErrParticipantLeft:
 		{
 			log.Println("The guy left off -_-!")
-			ctx.JSON(http.StatusBadRequest, gin.H{"message": "Participant has already left the event. Can't proceed with operation"})
+			ctx.JSON(
+				http.StatusBadRequest,
+				gin.H{"message": "Participant has already left the event. Can't proceed with operation"},
+			)
 			return
 		}
 	}
 
 	// Respond to the client
-	ctx.JSON(http.StatusOK, gin.H{"message": "QR JWT parsed and db operation was sucessful", "checkout": checkout, "operation": true, "dbParticipant": dbParticipant})
+	ctx.JSON(
+		http.StatusOK,
+		gin.H{
+			"message":       "QR JWT parsed and db operation was sucessful",
+			"checkout":      checkout,
+			"operation":     true,
+			"dbParticipant": dbParticipant,
+		},
+	)
 }
 
 func (a *App) HandleParticipantSearch(ctx *gin.Context) {}
@@ -334,14 +430,20 @@ func (a *App) HandleQRFetch(ctx *gin.Context) {
 	body, err := io.ReadAll(ctx.Request.Body)
 	if err != nil {
 		log.Println(err)
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Failed to read request body"})
+		ctx.JSON(
+			http.StatusBadRequest,
+			gin.H{"error": "Failed to read request body"},
+		)
 		return
 	}
 
 	var data map[string]interface{}
 	err = json.Unmarshal(body, &data)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse JSON"})
+		ctx.JSON(
+			http.StatusInternalServerError,
+			gin.H{"error": "Failed to parse JSON"},
+		)
 		return
 	}
 
@@ -350,7 +452,10 @@ func (a *App) HandleQRFetch(ctx *gin.Context) {
 
 	if err != nil && jwtClaims == nil {
 		log.Println("Invalid jwt")
-		ctx.JSON(http.StatusBadRequest, gin.H{"message": "Failed to pasrse JWT for the cliams. Seems like an invlaid QR"})
+		ctx.JSON(
+			http.StatusBadRequest,
+			gin.H{"message": "Failed to pasrse JWT for the cliams. Seems like an invlaid QR"},
+		)
 		return
 	}
 
@@ -362,7 +467,12 @@ func (a *App) HandleQRFetch(ctx *gin.Context) {
 		log.Println(err)
 	}
 
-	ctx.JSON(http.StatusOK, gin.H{"message": "details parseed sucessfully", "dbParticipant": dbparticipant})
+	ctx.JSON(
+		http.StatusOK,
+		gin.H{
+			"message":       "details parseed sucessfully",
+			"dbParticipant": dbparticipant},
+	)
 }
 
 // TODO:
@@ -380,16 +490,27 @@ func (a *App) HandleParticipantFetch(ctx *gin.Context) {
 		// search based on JWT ID
 		valid, _ := a.JWTAuthCheck(jwtID)
 		if !valid {
-			ctx.JSON(http.StatusBadRequest, gin.H{"message": "Invalid jwt ID"})
+			ctx.JSON(
+				http.StatusBadRequest,
+				gin.H{"message": "Invalid jwt ID"},
+			)
 			return
 		}
 		dbParticipant, err := a.Store.JWTFetchParticipant(jwtID)
 		if errors.Is(err, database.ErrDbOpenFailure) {
 			log.Println(err)
-			ctx.JSON(http.StatusInternalServerError, gin.H{"message": "Database OP failed server side, contact operators"})
+			ctx.JSON(
+				http.StatusInternalServerError,
+				gin.H{"message": "Database OP failed server side, contact operators"},
+			)
 			return
 		}
-		ctx.JSON(http.StatusOK, gin.H{"message": "participant fetched successfully", "dbParticipant": dbParticipant})
+		ctx.JSON(
+			http.StatusOK,
+			gin.H{
+				"message":       "participant fetched successfully",
+				"dbParticipant": dbParticipant},
+		)
 		return
 	} else {
 		log.Println("Fetching based on ID")
@@ -397,16 +518,27 @@ func (a *App) HandleParticipantFetch(ctx *gin.Context) {
 		switch err {
 		case database.ErrDbOpenFailure:
 			{
-				ctx.JSON(http.StatusInternalServerError, gin.H{"message": "Database OP failed server side, contact operators"})
+				ctx.JSON(
+					http.StatusInternalServerError,
+					gin.H{"message": "Database OP failed server side, contact operators"},
+				)
 				return
 			}
 		case database.ErrDbMissingRecord:
 			{
-				ctx.JSON(http.StatusBadRequest, gin.H{"message": "No participant exists. Details may be incorrect"})
+				ctx.JSON(
+					http.StatusBadRequest,
+					gin.H{"message": "No participant exists. Details may be incorrect"},
+				)
 				return
 			}
 		}
-		ctx.JSON(http.StatusOK, gin.H{"message": "participant fetched successfully", "dbParticipant": dbParticipant})
+		ctx.JSON(
+			http.StatusOK,
+			gin.H{
+				"message":       "participant fetched successfully",
+				"dbParticipant": dbParticipant},
+		)
 		return
 	}
 }
@@ -418,7 +550,10 @@ func (a *App) HandleLogin(ctx *gin.Context) {
 	// json-> map tried doing with string because ez but was not nice
 	if err := ctx.BindJSON(&requestBody); err != nil {
 		log.Println("Error binding JSON:", err)
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
+		ctx.JSON(
+			http.StatusBadRequest,
+			gin.H{"error": "Invalid request"},
+		)
 		return
 	}
 
@@ -434,9 +569,22 @@ func (a *App) HandleLogin(ctx *gin.Context) {
 
 	dbAuthUser, err := a.Store.VerifyLogin(incomingUserReq)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"message": "Database OP failed server side, contact operators", "success": false})
+		ctx.JSON(
+			http.StatusInternalServerError,
+			gin.H{
+				"message": "Database OP failed server side, contact operators",
+				"success": false,
+			},
+		)
 	} else {
-		ctx.JSON(http.StatusOK, gin.H{"message": "Login successful", "success": true, "dbAuthUser": dbAuthUser})
+		ctx.JSON(
+			http.StatusOK,
+			gin.H{
+				"message":    "Login successful",
+				"success":    true,
+				"dbAuthUser": dbAuthUser,
+			},
+		)
 	}
 	// if err == nil {
 	// 	log.Println("there is NO error")
@@ -462,32 +610,44 @@ func (a *App) HandleLogin(ctx *gin.Context) {
 }
 
 func HandleParticipantUpdate(ctx *gin.Context) {
-	ctx.JSON(http.StatusOK, gin.H{"message": "Participants details updated sucessfully"})
+	ctx.JSON(
+		http.StatusOK,
+		gin.H{"message": "Participants details updated sucessfully"},
+	)
 }
 
 func (a *App) HandleVolunteers(ctx *gin.Context) {
 	method := ctx.Param("method")
 
-	switch(method) {
+	switch method {
 	case "csv":
 		a.HandleVolunteersCsv(ctx)
 	case "manual":
 		a.HandleVolunteerManual(ctx)
 	default:
-		ctx.String(http.StatusBadRequest, "Error: No method specified")
+		ctx.String(
+			http.StatusBadRequest,
+			"Error: No method specified",
+		)
 	}
 }
 
 func (a *App) HandleVolunteersCsv(ctx *gin.Context) {
 	file, err := ctx.FormFile("file")
 	if err != nil {
-		ctx.String(http.StatusBadRequest, "Error: No file uploaded")
+		ctx.String(
+			http.StatusBadRequest,
+			"Error: No file uploaded",
+		)
 		return
 	}
 
 	fileContent, err := file.Open()
 	if err != nil {
-		ctx.String(http.StatusInternalServerError, "Error: Failed to open file")
+		ctx.String(
+			http.StatusInternalServerError,
+			"Error: Failed to open file",
+		)
 		return
 	}
 	defer fileContent.Close()
@@ -496,7 +656,10 @@ func (a *App) HandleVolunteersCsv(ctx *gin.Context) {
 	content := bytes.Buffer{}
 	_, err = io.Copy(&content, reader)
 	if err != nil {
-		ctx.String(http.StatusInternalServerError, "Error: Failed to read file")
+		ctx.String(
+			http.StatusInternalServerError,
+			"Error: Failed to read file",
+		)
 		return
 	}
 
@@ -521,10 +684,16 @@ func (a *App) HandleVolunteersCsv(ctx *gin.Context) {
 	// Parsing the csv to a slice of Participants struct
 	volunteers, err := a.ParseVolunteers(a.Store.Db, formEntriesMap)
 	if err != nil {
-		ctx.String(http.StatusInternalServerError, "Error: Failed to write records to the database")
+		ctx.String(
+			http.StatusInternalServerError,
+			"Error: Failed to write records to the database",
+		)
 	}
 
-	ctx.JSON(http.StatusOK, gin.H{"data": volunteers})
+	ctx.JSON(
+		http.StatusOK,
+		gin.H{"data": volunteers},
+	)
 }
 
 func (a *App) HandleVolunteerManual(ctx *gin.Context) {
@@ -536,8 +705,17 @@ func (a *App) HandleVolunteerManual(ctx *gin.Context) {
 	// Parse volunteer manually.
 	success, volunteer, err := a.ParseVolunteerManual(a.Store.Db, name, email, phone)
 	if err != nil {
-		ctx.String(http.StatusInternalServerError, "Error: Failed to write records to the database")
+		ctx.String(
+			http.StatusInternalServerError,
+			"Error: Failed to write records to the database",
+		)
 	}
 
-	ctx.JSON(http.StatusOK, gin.H{"data": volunteer, "deletionSuccess": success})
+	ctx.JSON(
+		http.StatusOK,
+		gin.H{
+			"data":            volunteer,
+			"deletionSuccess": success,
+		},
+	)
 }

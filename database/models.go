@@ -45,10 +45,11 @@ type DBParticipant struct {
 	UUID string `gorm:"unique"`
 
 	// foreign keys
-	ParticipantID int64       `json:"-"`
-	Participant   Participant `json:"-"`
-	CheckpointsID int64       `json:"-"`
-	Checkpoints   Checkpoints `json:"-"`
+	ParticipantID int64
+	Participant   Participant
+
+	CheckpointsID int64
+	Checkpoints   Checkpoints
 }
 
 // This struct stores all fields parsed from the csv
