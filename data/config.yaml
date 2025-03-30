@@ -1,0 +1,3 @@
+envPath: "./data/.env"
+dbPath: "./data/events.db"
+qrPath: "./data/qr/"

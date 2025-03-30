@@ -13,3 +13,4 @@ eventloop
 eventloop-bin
 /mail/mail
 /mail/**/
+./data/qr/*

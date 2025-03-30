@@ -172,12 +172,14 @@ func (a *App) AuthenticationMiddleware(userRole string) gin.HandlerFunc {
 }
 
 // Parsing a slice of maps(rows of records) from csv data to a slice of participant structs
+// NOTE: this function now handles db calls to append particiaptns to the database as well
 func (a *App) ParseParticipants(db *gorm.DB, teamRecords []map[string]string) (*[]ParticipantInfo, error) {
 	participants := []ParticipantInfo{}
 
 	for i := 0; i < len(teamRecords); i++ {
 		record := teamRecords[i]
-		teamLeaderEmail := record["Email"]
+		teamLeaderEmail := record["Email Address"]
+		log.Println("team leader: ", teamLeaderEmail)
 
 		team := database.Team{
 			Team:  record["Team Name"],
