@@ -9,7 +9,7 @@ func CorsMiddleware() gin.HandlerFunc {
 		ctx.Writer.Header().Set("Access-Control-Allow-Origin", "https://eventloop-testbed.vercel.app")
 		ctx.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
 		ctx.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE")
-		ctx.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+		ctx.Writer.Header().Set("Access-Control-Allow-Headers", "*")
 
 		if ctx.Request.Method == "OPTIONS" {
 			ctx.AbortWithStatus(204)
