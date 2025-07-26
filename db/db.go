@@ -6,14 +6,13 @@ import (
 	"time"
 
 	"github.com/couchbase/gocb/v2"
-	"github.com/joho/godotenv"
 )
 
 func InitialiseBucket() *gocb.Bucket {
-	err := godotenv.Load("/home/lalith/coding/hsp-ecc/eloop-be-rw/.env")
-	if err != nil {
-		log.Fatalf("error loading .env file: %s", err)
-	}
+	// err := godotenv.Load(".env")
+	// if err != nil {
+	// 	log.Fatalf("error loading .env file: %s", err)
+	// }
 
 	connectionString := os.Getenv("DB_CONNECTION_STRING")
 	bucketName := os.Getenv("DB_BUCKET_NAME")
