@@ -27,6 +27,8 @@ func apiRouter(r *gin.RouterGroup) {
 
 	r.POST("/login", handlers.Login)
 
+	r.OPTIONS("/login", handlers.Login)
+
 	r.GET("/refresh", handlers.Refresh)
 
 	r.POST("/logout", handlers.Logout)
