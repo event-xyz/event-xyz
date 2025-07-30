@@ -6,6 +6,7 @@ import (
 	"github.com/eventloop-testbed/backend/db"
 	"github.com/eventloop-testbed/backend/handlers"
 	"github.com/eventloop-testbed/backend/handlers/dbAuthorisedUsers"
+	"github.com/eventloop-testbed/backend/handlers/participants"
 	"github.com/eventloop-testbed/backend/handlers/teams"
 	"github.com/eventloop-testbed/backend/middleware"
 
@@ -26,12 +27,12 @@ func apiRouter(r *gin.RouterGroup) {
 	r.POST("/teams/create", teams.AddTeam)
 
 	r.POST("/login", handlers.Login)
-
 	r.OPTIONS("/login", handlers.Login)
-
 	r.GET("/refresh", handlers.Refresh)
-
 	r.POST("/logout", handlers.Logout)
+
+	r.POST("/participants/add", participants.AddParticipant)
+	r.POST("/participants/edit", participants.EditParticipant)
 }
 
 func Main() {

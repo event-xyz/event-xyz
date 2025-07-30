@@ -10,7 +10,6 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// AddUser handles adding a new user
 func AddParticipant(c *gin.Context) {
 	// Validate and extract validated data from the context [ref: middleware (validateUserDetails)]
 	name := c.MustGet("validatedName").(string)
