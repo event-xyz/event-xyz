@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 
@@ -12,6 +13,7 @@ import (
 )
 
 func QRScan(c *gin.Context) {
+	log.Printf("entered func")
 	user, ok := c.Get("user")
 	if !ok {
 		fmt.Print(ok)
@@ -31,15 +33,22 @@ func QRScan(c *gin.Context) {
 		hash.Write([]byte(rawString))
 		encodedString := base64.URLEncoding.EncodeToString(hash.Sum(nil))
 
+		log.Printf("auth success")
+
 		if encodedString == givenQRString {
 			c.JSON(http.StatusOK, gin.H{
 				"message": "Authenticated QR",
+				"user":    user,
 			})
 			return
 		}
+		return
 	} else {
 		c.JSON(http.StatusForbidden, gin.H{
 			"message": "teri fielding set hai",
 		})
 	}
+	c.JSON(http.StatusBadRequest, gin.H{
+		"message": "very bad thing happened",
+	})
 }

@@ -46,6 +46,7 @@ func apiRouter(r *gin.RouterGroup) {
 	r.POST("/forms/:docID/submit_response", forms.SubmitResponse)
 
 	r.POST("/verifyQR", qrscan.QRScan)
+	r.OPTIONS("/verifyQR", qrscan.QRScan)
 }
 
 func Main() {
