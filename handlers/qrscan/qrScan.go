@@ -72,7 +72,7 @@ func QRScan(c *gin.Context) {
 	if rows.Next() {
 		if err := rows.Row(&participant); err == nil {
 			// Compute expected QR string
-			rawString := fmt.Sprintf("%s:%s", participant.Participant.Email, os.Getenv("QR_SECRET_KEY"))
+			rawString := fmt.Sprintf("%s:%s", participant.Participant.ID, os.Getenv("QR_SECRET_KEY"))
 			hash := sha256.New()
 			hash.Write([]byte(rawString))
 			expectedQRString := base64.URLEncoding.EncodeToString(hash.Sum(nil))
