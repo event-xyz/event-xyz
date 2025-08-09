@@ -81,6 +81,8 @@ func QRScan(c *gin.Context) {
 			log.Printf("AUTH: expected=%s", expectedQRString)
 			log.Printf("AUTH: received=%s", req.QRString)
 
+			participant.Participant.Role = "participant"
+
 			if expectedQRString == req.QRString {
 				c.JSON(http.StatusOK, gin.H{
 					"message": "Authenticated QR",
