@@ -80,18 +80,18 @@ func GetAuthUser(name, email string) (*AuthUserResult, error) {
 	}
 
 	if rows.Next() {
-		qrCodeBase64, err := GenerateQRCode(user.Participant.Email, os.Getenv("QR_SECRET_KEY"))
+		encodedString, qrCodeBase64, err := GenerateQRCode(user.Participant.Email, os.Getenv("QR_SECRET_KEY"))
 		if err != nil {
 			return nil, err
 		}
 
 		partCol.Replace(user.Participant.ID, map[string]interface{}{
-			"qr_string": qrCodeBase64,
+			"qr_string": encodedString,
 		}, &gocb.ReplaceOptions{
 			Timeout: 15 * time.Second,
 		})
 
-		log.Printf("qr string: %v", qrCodeBase64)
+		log.Printf("qr string: %v", encodedString)
 		if err := rows.Row(&user); err == nil {
 			return &AuthUserResult{Success: true, ID: user.Participant.ID, Name: user.Participant.Name, Email: user.Participant.Email, Role: user.Participant.Role, QR_string: qrCodeBase64}, nil
 		}
@@ -112,9 +112,9 @@ func GetAuthUser(name, email string) (*AuthUserResult, error) {
 		QRString:    "NA",
 	}
 
-	qrCodeBase64, err := GenerateQRCode(newParticipant.Email, os.Getenv("QR_SECRET_KEY"))
+	encodedString, qrCodeBase64, err := GenerateQRCode(newParticipant.Email, os.Getenv("QR_SECRET_KEY"))
 
-	newParticipant.QRString = qrCodeBase64
+	newParticipant.QRString = encodedString
 
 	if err != nil {
 		return nil, err

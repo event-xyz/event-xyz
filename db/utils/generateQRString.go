@@ -8,7 +8,7 @@ import (
 	"github.com/skip2/go-qrcode"
 )
 
-func GenerateQRCode(email, secret_key string) (string, error) {
+func GenerateQRCode(email, secret_key string) (string, string, error) {
 	// Concatenate email, secret_key, and id for uniqueness
 	rawString := fmt.Sprintf("%s:%s", email, secret_key)
 
@@ -20,11 +20,11 @@ func GenerateQRCode(email, secret_key string) (string, error) {
 	// Generate QR Code using the encoded string
 	qrCode, err := qrcode.Encode(encodedString, qrcode.Medium, 256)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 
 	// Convert QR Code to a base64 string
 	qrCodeBase64 := "data:image/png;base64," + base64.StdEncoding.EncodeToString(qrCode)
 
-	return qrCodeBase64, nil
+	return encodedString, qrCodeBase64, nil
 }
