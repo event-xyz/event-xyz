@@ -18,7 +18,7 @@ func AddParticipant(c *gin.Context) {
 
 	// Create the user object using the model
 	participant := models.Participant{
-		ID:          utils.GenerateDocID(role),
+		ID:          utils.GenerateDocID(email),
 		Name:        name,
 		Email:       email,
 		Role:        role,

@@ -2,6 +2,8 @@ package utils
 
 import (
 	"fmt"
+	"log"
+	"os"
 	"time"
 
 	"github.com/eventloop-testbed/backend/db"
@@ -12,11 +14,12 @@ import (
 
 // AuthUserResult holds the result structure
 type AuthUserResult struct {
-	Success bool   `json:"success"`
-	ID      string `json:"id"`
-	Name    string `json:"name"`
-	Email   string `json:"email"`
-	Role    string `json:"role"`
+	Success   bool   `json:"success"`
+	ID        string `json:"id"`
+	Name      string `json:"name"`
+	Email     string `json:"email"`
+	Role      string `json:"role"`
+	QR_string string `json:"qr_string"`
 }
 
 // GetAuthUser implements the logic to fetch or create a user
@@ -68,21 +71,34 @@ func GetAuthUser(name, email string) (*AuthUserResult, error) {
 
 	var user struct {
 		Participant struct {
-			ID    string `json:"id"`
-			Name  string `json:"name"`
-			Email string `json:"email"`
-			Role  string `json:"role"`
+			ID        string `json:"id"`
+			Name      string `json:"name"`
+			Email     string `json:"email"`
+			Role      string `json:"role"`
+			QR_string string `json:"qr_string"`
 		} `json:"participants"`
 	}
 
 	if rows.Next() {
+		qrCodeBase64, err := GenerateQRCode(user.Participant.Email, os.Getenv("QR_SECRET_KEY"))
+		if err != nil {
+			return nil, err
+		}
+
+		partCol.Replace(user.Participant.ID, map[string]interface{}{
+			"qr_string": qrCodeBase64,
+		}, &gocb.ReplaceOptions{
+			Timeout: 15 * time.Second,
+		})
+
+		log.Printf("qr string: %v", qrCodeBase64)
 		if err := rows.Row(&user); err == nil {
-			return &AuthUserResult{Success: true, ID: user.Participant.ID, Name: user.Participant.Name, Email: user.Participant.Email, Role: user.Participant.Role}, nil
+			return &AuthUserResult{Success: true, ID: user.Participant.ID, Name: user.Participant.Name, Email: user.Participant.Email, Role: user.Participant.Role, QR_string: qrCodeBase64}, nil
 		}
 	}
 	// 3. Insert new participant
 	newParticipant := models.Participant{
-		ID:          GenerateDocID("participant"),
+		ID:          GenerateDocID(email),
 		Name:        name,
 		Email:       email,
 		Role:        "participant",
@@ -95,10 +111,18 @@ func GetAuthUser(name, email string) (*AuthUserResult, error) {
 		Shortlisted: false,
 		QRString:    "NA",
 	}
-	_, upsetErr := partCol.Upsert(newParticipant.ID, newParticipant, &gocb.UpsertOptions{Timeout: 5 * time.Second})
+
+	qrCodeBase64, err := GenerateQRCode(newParticipant.Email, os.Getenv("QR_SECRET_KEY"))
+
+	newParticipant.QRString = qrCodeBase64
+
+	if err != nil {
+		return nil, err
+	}
+	_, upsetErr := partCol.Upsert(newParticipant.ID, newParticipant, &gocb.UpsertOptions{Timeout: 15 * time.Second})
 
 	if upsetErr != nil {
 		return nil, err
 	}
-	return &AuthUserResult{Success: true, ID: newParticipant.ID, Name: newParticipant.Name, Email: newParticipant.Email, Role: "participant"}, nil
+	return &AuthUserResult{Success: true, ID: newParticipant.ID, Name: newParticipant.Name, Email: newParticipant.Email, Role: "participant", QR_string: qrCodeBase64}, nil
 }

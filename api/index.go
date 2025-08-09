@@ -9,6 +9,7 @@ import (
 	"github.com/eventloop-testbed/backend/handlers/events"
 	"github.com/eventloop-testbed/backend/handlers/forms"
 	"github.com/eventloop-testbed/backend/handlers/participants"
+	"github.com/eventloop-testbed/backend/handlers/qrscan"
 	"github.com/eventloop-testbed/backend/handlers/teams"
 	"github.com/eventloop-testbed/backend/middleware"
 
@@ -43,6 +44,8 @@ func apiRouter(r *gin.RouterGroup) {
 	r.PUT("/forms/:docID/edit", forms.UpdateForm)
 	r.GET("/forms/:docID/responses", forms.Responses)
 	r.POST("/forms/:docID/submit_response", forms.SubmitResponse)
+
+	r.POST("/verifyQR", qrscan.QRScan)
 }
 
 func Main() {

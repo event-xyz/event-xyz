@@ -31,7 +31,6 @@ func Login(c *gin.Context) {
 		return
 	}
 
-	// Verify the Google ID token (you'll implement this using Google OAuth in verifyToken function)
 	user, err := VerifyToken(request.Credentials)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid token or server error"})
@@ -74,10 +73,11 @@ func Login(c *gin.Context) {
 	// Respond with user info
 	c.JSON(http.StatusOK, gin.H{
 		"user": gin.H{
-			"id":    result.ID,
-			"name":  name,
-			"email": email,
-			"role":  result.Role,
+			"id":        result.ID,
+			"name":      name,
+			"email":     email,
+			"role":      result.Role,
+			"qr_string": result.QR_string,
 		},
 	})
 }
