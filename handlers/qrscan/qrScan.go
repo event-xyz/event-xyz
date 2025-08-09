@@ -62,7 +62,7 @@ func QRScan(c *gin.Context) {
 
 	log.Printf("req qr string: %v", req.QRString)
 
-	query := "SELECT id, name, email, role, qr_string from `participants` WHERE qr_string = $1 LIMIT 1;"
+	query := "SELECT id, name, email, qr_string from `participants` WHERE qr_string = $1 LIMIT 1;"
 	rows, err := scope.Query(query, &gocb.QueryOptions{
 		Adhoc:                true,
 		PositionalParameters: []interface{}{req.QRString},
