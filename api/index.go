@@ -6,6 +6,8 @@ import (
 	"github.com/eventloop-testbed/backend/db"
 	"github.com/eventloop-testbed/backend/handlers"
 	"github.com/eventloop-testbed/backend/handlers/dbAuthorisedUsers"
+	"github.com/eventloop-testbed/backend/handlers/events"
+	"github.com/eventloop-testbed/backend/handlers/forms"
 	"github.com/eventloop-testbed/backend/handlers/participants"
 	"github.com/eventloop-testbed/backend/handlers/teams"
 	"github.com/eventloop-testbed/backend/middleware"
@@ -26,19 +28,32 @@ func apiRouter(r *gin.RouterGroup) {
 
 	r.POST("/teams/create", teams.AddTeam)
 
-	r.POST("/login", handlers.Login)
-	r.OPTIONS("/login", handlers.Login)
 	r.GET("/refresh", handlers.Refresh)
 	r.POST("/logout", handlers.Logout)
 
 	r.POST("/participants/add", participants.AddParticipant)
 	r.POST("/participants/edit", participants.EditParticipant)
+
+	r.GET("/events/", events.GetAllEvents)
+	r.POST("/events/create", events.CreateEvent)
+
+	r.POST("/forms/create", forms.SaveForm)
+	r.GET("/forms/", forms.GetAllForms)
+	r.GET("/forms/:docID", forms.GetForm)
+	r.PUT("/forms/:docID/edit", forms.UpdateForm)
+	r.GET("/forms/:docID/responses", forms.Responses)
+	r.POST("/forms/:docID/submit_response", forms.SubmitResponse)
 }
 
 func Main() {
 	app = gin.New()
 	r := app.Group("/")
 	r.Use(handlers.CorsMiddleware())
+
+	r.POST("/login", handlers.Login)
+	r.OPTIONS("/login", handlers.Login)
+
+	r.Use(middleware.SetUser())
 
 	bucket := db.InitialiseBucket().Scope("eventloop")
 	if bucket == nil {

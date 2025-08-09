@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/eventloop-testbed/backend/db"
@@ -29,10 +30,12 @@ func GetAuthUser(name, email string) (*AuthUserResult, error) {
 	rows, err := scope.Query(query, &gocb.QueryOptions{
 		Adhoc:                true,
 		PositionalParameters: []interface{}{email},
-		Timeout:              5 * time.Second,
+		Timeout:              10 * time.Second,
 	})
 
 	if err != nil {
+		fmt.Printf("%v\n", email)
+		fmt.Printf("err occured: %v", err)
 		return nil, err
 	}
 	var dbAuthUser struct {
@@ -46,6 +49,8 @@ func GetAuthUser(name, email string) (*AuthUserResult, error) {
 
 	if rows.Next() {
 		if err := rows.Row(&dbAuthUser); err == nil {
+			fmt.Printf("no errors getting records")
+			fmt.Print(dbAuthUser)
 			return &AuthUserResult{Success: true, ID: dbAuthUser.DbAuthorisedUsers.ID, Name: dbAuthUser.DbAuthorisedUsers.Name, Email: dbAuthUser.DbAuthorisedUsers.Email, Role: dbAuthUser.DbAuthorisedUsers.Role}, nil
 		}
 	}

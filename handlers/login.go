@@ -42,7 +42,6 @@ func Login(c *gin.Context) {
 	email := user["email"].(string)
 	name := user["name"].(string)
 
-	// For now, we're mocking the result of database lookup
 	result, err := utils.GetAuthUser(name, email)
 
 	// If no user found
