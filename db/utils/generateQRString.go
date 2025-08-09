@@ -8,9 +8,9 @@ import (
 	"github.com/skip2/go-qrcode"
 )
 
-func GenerateQRCode(email, secret_key string) (string, string, error) {
-	// Concatenate email, secret_key, and id for uniqueness
-	rawString := fmt.Sprintf("%s:%s", email, secret_key)
+func GenerateQRCode(id, secret_key string) (string, string, error) {
+	// Concatenate id, secret_key, and id for uniqueness
+	rawString := fmt.Sprintf("%s:%s", id, secret_key)
 
 	// Hash the concatenated string for better security
 	hash := sha256.New()

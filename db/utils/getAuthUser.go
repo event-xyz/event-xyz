@@ -80,7 +80,7 @@ func GetAuthUser(name, email string) (*AuthUserResult, error) {
 	}
 
 	if rows.Next() {
-		encodedString, qrCodeBase64, err := GenerateQRCode(user.Participant.Email, os.Getenv("QR_SECRET_KEY"))
+		encodedString, qrCodeBase64, err := GenerateQRCode(user.Participant.ID, os.Getenv("QR_SECRET_KEY"))
 		if err != nil {
 			return nil, err
 		}
@@ -112,7 +112,7 @@ func GetAuthUser(name, email string) (*AuthUserResult, error) {
 		QRString:    "NA",
 	}
 
-	encodedString, qrCodeBase64, err := GenerateQRCode(newParticipant.Email, os.Getenv("QR_SECRET_KEY"))
+	encodedString, qrCodeBase64, err := GenerateQRCode(newParticipant.ID, os.Getenv("QR_SECRET_KEY"))
 
 	newParticipant.QRString = encodedString
 
