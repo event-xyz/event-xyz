@@ -55,7 +55,6 @@ func QRScan(c *gin.Context) {
 			ID        string `json:"id"`
 			Name      string `json:"name"`
 			Email     string `json:"email"`
-			Role      string `json:"role"`
 			QR_string string `json:"qr_string"`
 		} `json:"participants"`
 	}
@@ -80,8 +79,6 @@ func QRScan(c *gin.Context) {
 			log.Printf("AUTH: claims[email]=%v", participant.Participant.Email)
 			log.Printf("AUTH: expected=%s", expectedQRString)
 			log.Printf("AUTH: received=%s", req.QRString)
-
-			participant.Participant.Role = "participant"
 
 			if expectedQRString == req.QRString {
 				c.JSON(http.StatusOK, gin.H{
