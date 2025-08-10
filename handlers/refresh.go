@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/base64"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"time"
@@ -33,10 +34,12 @@ func Refresh(c *gin.Context) {
 	if err == nil {
 		qrString, err := getQRCodeString(user["email"].(string))
 
-		if err != nil {
+		if user["role"] == "participant" {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "could not fetch qr string"})
-			return
+		} else {
+			c.JSON(http.StatusOK, gin.H{"loggedIn": true, "user": user})
 		}
+		log.Printf("err: %v", err)
 
 		user["qr_string"] = qrString
 		c.JSON(http.StatusOK, gin.H{"loggedIn": true, "user": user})
