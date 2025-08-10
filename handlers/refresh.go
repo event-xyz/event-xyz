@@ -135,17 +135,17 @@ func getQRCodeString(email string) (string, error) {
 			return "", err
 		}
 
-		// Generate the QR code if not available in the DB
+		// If QR string doesn't exist in the DB, generate and store it
 		if user.Participant.QR_string == "" {
 			encodedString, qrCodeBase64, err := utils.GenerateQRCode(user.Participant.ID, os.Getenv("QR_SECRET_KEY"))
 			if err != nil {
 				return "", err
 			}
 
-			// Update QR string in the database
+			// Store the base64-encoded QR string in the database
 			partCol := db.InitialiseBucket().Collection("participants")
 			_, err = partCol.Replace(user.Participant.ID, map[string]interface{}{
-				"qr_string": encodedString,
+				"qr_string": encodedString, // Store the base64-encoded QR code
 			}, &gocb.ReplaceOptions{
 				Timeout: 15 * time.Second,
 			})
@@ -154,11 +154,11 @@ func getQRCodeString(email string) (string, error) {
 				return "", err
 			}
 
-			// Return the generated QR code string
+			// Return the qrCodeBase64 for frontend rendering
 			return qrCodeBase64, nil
 		}
 
-		// If QR string exists, return it
+		// If QR string exists, return the qrCodeBase64 for frontend rendering
 		return user.Participant.QR_string, nil
 	}
 
