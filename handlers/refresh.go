@@ -34,10 +34,12 @@ func Refresh(c *gin.Context) {
 	if err == nil {
 		qrString, err := getQRCodeString(user["email"].(string))
 
-		if user["role"] == "participant" {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "could not fetch qr string"})
-		} else {
-			return
+		if err != nil {
+			if user["role"] == "participant" {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "could not fetch qr string"})
+			} else {
+				return
+			}
 		}
 		log.Printf("err: %v", err)
 
