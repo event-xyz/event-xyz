@@ -3,9 +3,13 @@ package handlers
 import (
 	"fmt"
 	"net/http"
+	"os"
 	"time"
 
+	"github.com/couchbase/gocb/v2"
 	"github.com/dgrijalva/jwt-go"
+	"github.com/eventloop-testbed/backend/db"
+	"github.com/eventloop-testbed/backend/db/utils"
 	"github.com/gin-gonic/gin"
 )
 
@@ -25,6 +29,14 @@ func Refresh(c *gin.Context) {
 	// Verify access token
 	user, err := verifyJWT(accessToken, JWT_SECRET)
 	if err == nil {
+		qrString, err := getQRCodeString(user["email"].(string))
+
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "could not fetch qr string"})
+			return
+		}
+
+		user["qr_string"] = qrString
 		c.JSON(http.StatusOK, gin.H{"loggedIn": true, "user": user})
 		return
 	}
@@ -38,6 +50,12 @@ func Refresh(c *gin.Context) {
 		return
 	}
 
+	qrString, err := getQRCodeString(user["email"].(string))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "could not fetch qr string"})
+		return
+	}
+
 	// Issue a new access token if refresh token is valid
 	newAccessToken, err := generateJWT(user, JWT_SECRET)
 	if err != nil {
@@ -47,6 +65,8 @@ func Refresh(c *gin.Context) {
 
 	// Set new access token in cookie
 	c.SetCookie("access_token", newAccessToken, COOKIE_OPTIONS.MaxAge, "/", "", COOKIE_OPTIONS.Secure, COOKIE_OPTIONS.HttpOnly)
+
+	user["qr_string"] = qrString
 
 	c.JSON(http.StatusOK, gin.H{"loggedIn": true, "user": user})
 }
@@ -85,4 +105,62 @@ func generateJWT(user map[string]interface{}, secret string) (string, error) {
 		return "", err
 	}
 	return tokenString, nil
+}
+
+func getQRCodeString(email string) (string, error) {
+	// Perform the database query to retrieve the participant and their QR string
+	query := "SELECT * FROM `participants` WHERE email = $1 LIMIT 1"
+	rows, err := db.InitialiseBucket().Scope("eventloop").Query(query, &gocb.QueryOptions{
+		Adhoc:                true,
+		PositionalParameters: []interface{}{email},
+		Timeout:              15 * time.Second,
+	})
+
+	if err != nil {
+		return "", err
+	}
+
+	var user struct {
+		Participant struct {
+			ID        string `json:"id"`
+			Name      string `json:"name"`
+			Email     string `json:"email"`
+			Role      string `json:"role"`
+			QR_string string `json:"qr_string"`
+		} `json:"participants"`
+	}
+
+	if rows.Next() {
+		if err := rows.Row(&user); err != nil {
+			return "", err
+		}
+
+		// Generate the QR code if not available in the DB
+		if user.Participant.QR_string == "" {
+			encodedString, qrCodeBase64, err := utils.GenerateQRCode(user.Participant.ID, os.Getenv("QR_SECRET_KEY"))
+			if err != nil {
+				return "", err
+			}
+
+			// Update QR string in the database
+			partCol := db.InitialiseBucket().Collection("participants")
+			_, err = partCol.Replace(user.Participant.ID, map[string]interface{}{
+				"qr_string": encodedString,
+			}, &gocb.ReplaceOptions{
+				Timeout: 15 * time.Second,
+			})
+
+			if err != nil {
+				return "", err
+			}
+
+			// Return the generated QR code string
+			return qrCodeBase64, nil
+		}
+
+		// If QR string exists, return it
+		return user.Participant.QR_string, nil
+	}
+
+	return "", fmt.Errorf("user not found")
 }
