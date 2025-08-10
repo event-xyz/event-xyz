@@ -37,11 +37,15 @@ func apiRouter(r *gin.RouterGroup) {
 
 	r.GET("/events/", events.GetAllEvents)
 	r.POST("/events/create", events.CreateEvent)
+	r.OPTIONS("/events/create", events.CreateEvent)
 
 	r.POST("/forms/create", forms.SaveForm)
 	r.GET("/forms/", forms.GetAllForms)
 	r.GET("/forms/:docID", forms.GetForm)
+
 	r.PUT("/forms/:docID/edit", forms.UpdateForm)
+	r.OPTIONS("/forms/:docID/edit", forms.UpdateForm)
+
 	r.GET("/forms/:docID/responses", forms.Responses)
 	r.POST("/forms/:docID/submit_response", forms.SubmitResponse)
 
