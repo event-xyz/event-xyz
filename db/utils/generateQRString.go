@@ -9,7 +9,7 @@ import (
 )
 
 func GenerateQRCode(id, secret_key string) (string, string, error) {
-	// Concatenate id, secret_key, and id for uniqueness
+	// Concatenate id and secret_key for uniqueness
 	rawString := fmt.Sprintf("%s:%s", id, secret_key)
 
 	// Hash the concatenated string for better security

@@ -33,7 +33,7 @@ func GetAuthUser(name, email string) (*AuthUserResult, error) {
 	rows, err := scope.Query(query, &gocb.QueryOptions{
 		Adhoc:                true,
 		PositionalParameters: []interface{}{email},
-		Timeout:              10 * time.Second,
+		Timeout:              15 * time.Second,
 	})
 
 	if err != nil {
@@ -62,7 +62,7 @@ func GetAuthUser(name, email string) (*AuthUserResult, error) {
 	rows, err = scope.Query(query, &gocb.QueryOptions{
 		Adhoc:                true,
 		PositionalParameters: []interface{}{email},
-		Timeout:              5 * time.Second,
+		Timeout:              15 * time.Second,
 	})
 
 	if err != nil {

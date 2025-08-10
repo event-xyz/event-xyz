@@ -24,7 +24,7 @@ func Responses(c *gin.Context) {
 	rows, err := scope.Query(query, &gocb.QueryOptions{
 		Adhoc:                true,
 		PositionalParameters: []interface{}{docID},
-		Timeout:              5 * time.Second,
+		Timeout:              15 * time.Second,
 	})
 	if err != nil {
 		// Return an error response if the query fails

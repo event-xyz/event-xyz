@@ -55,6 +55,7 @@ func QRScan(c *gin.Context) {
 			ID        string `json:"id"`
 			Name      string `json:"name"`
 			Email     string `json:"email"`
+			Role      string `json:"role"`
 			QR_string string `json:"qr_string"`
 		} `json:"participants"`
 	}
@@ -65,7 +66,7 @@ func QRScan(c *gin.Context) {
 	rows, err := scope.Query(query, &gocb.QueryOptions{
 		Adhoc:                true,
 		PositionalParameters: []interface{}{req.QRString},
-		Timeout:              10 * time.Second,
+		Timeout:              15 * time.Second,
 	})
 
 	if rows.Next() {

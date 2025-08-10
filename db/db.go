@@ -25,7 +25,7 @@ func InitialiseBucket() *gocb.Bucket {
 			Password: password,
 		},
 		TimeoutsConfig: gocb.TimeoutsConfig{
-			ConnectTimeout: time.Second * 10,
+			ConnectTimeout: time.Second * 15,
 		},
 		SecurityConfig: gocb.SecurityConfig{
 			TLSSkipVerify: false,
