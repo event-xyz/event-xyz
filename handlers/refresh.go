@@ -56,6 +56,8 @@ func Refresh(c *gin.Context) {
 	if err != nil {
 		if user["role"] == "participant" {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "could not fetch qr string"})
+		} else {
+			return
 		}
 		return
 	}
