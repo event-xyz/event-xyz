@@ -57,7 +57,7 @@ func Refresh(c *gin.Context) {
 		if user["role"] == "participant" {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "could not fetch qr string"})
 		} else {
-			return
+			c.JSON(http.StatusOK, gin.H{"loggedIn": true, "user": user})
 		}
 		return
 	}
