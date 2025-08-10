@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"encoding/base64"
 	"fmt"
 	"net/http"
 	"os"
@@ -11,6 +12,7 @@ import (
 	"github.com/eventloop-testbed/backend/db"
 	"github.com/eventloop-testbed/backend/db/utils"
 	"github.com/gin-gonic/gin"
+	"github.com/skip2/go-qrcode"
 )
 
 func Refresh(c *gin.Context) {
@@ -158,8 +160,16 @@ func getQRCodeString(email string) (string, error) {
 			return qrCodeBase64, nil
 		}
 
+		// Generate QR Code using the encoded string
+		qrCode, err := qrcode.Encode(user.Participant.QR_string, qrcode.Medium, 256)
+		if err != nil {
+			return "", err
+		}
+
+		// Convert QR Code to a base64 string
+		qrCodeBase64 := "data:image/png;base64," + base64.StdEncoding.EncodeToString(qrCode)
 		// If QR string exists, return the qrCodeBase64 for frontend rendering
-		return user.Participant.QR_string, nil
+		return qrCodeBase64, nil
 	}
 
 	return "", fmt.Errorf("user not found")
