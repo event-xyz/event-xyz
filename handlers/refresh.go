@@ -29,56 +29,50 @@ func Refresh(c *gin.Context) {
 		return
 	}
 
-	// Verify access token
+	// Try verifying access token
 	user, err := verifyJWT(accessToken, JWT_SECRET)
 	if err == nil {
-		qrString, err := getQRCodeString(user["email"].(string))
+		handleQRAndRespond(c, user)
+		return
+	}
 
-		if err != nil {
-			if user["role"] == "participant" {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "could not fetch qr string"})
-			} else {
-				return
-			}
+	// Access token invalid, try refresh token
+	user, err = verifyJWT(refreshToken, REFRESH_JWT_SECRET)
+	if err != nil {
+		// Clear cookies
+		c.SetCookie("access_token", "", -1, "/", "", COOKIE_OPTIONS.Secure, COOKIE_OPTIONS.HttpOnly)
+		c.SetCookie("refresh_token", "", -1, "/", "", COOKIE_OPTIONS.Secure, COOKIE_OPTIONS.HttpOnly)
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "refresh token expired"})
+		return
+	}
+
+	// Generate new access token
+	newAccessToken, err := generateJWT(user, JWT_SECRET)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "could not generate new access token"})
+		return
+	}
+
+	// Set the new access token cookie
+	c.SetCookie("access_token", newAccessToken, COOKIE_OPTIONS.MaxAge, "/", "", COOKIE_OPTIONS.Secure, COOKIE_OPTIONS.HttpOnly)
+
+	handleQRAndRespond(c, user)
+}
+
+func handleQRAndRespond(c *gin.Context, user map[string]interface{}) {
+	qrString, err := getQRCodeString(user["email"].(string))
+	if err != nil {
+		log.Printf("QR fetch error: %v", err)
+		if user["role"] == "participant" {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "could not fetch QR code"})
+			return
 		}
-		log.Printf("err: %v", err)
-
-		user["qr_string"] = qrString
+		// For non-participants, just return without responding again
 		c.JSON(http.StatusOK, gin.H{"loggedIn": true, "user": user})
 		return
 	}
 
-	// If access token is expired or invalid, try to verify refresh token
-	user, err = verifyJWT(refreshToken, REFRESH_JWT_SECRET)
-	if err != nil {
-		c.SetCookie("access_token", "", -1, "/", "", COOKIE_OPTIONS.Secure, COOKIE_OPTIONS.HttpOnly)
-		c.SetCookie("refresh_token", "", -1, "/", "", COOKIE_OPTIONS.Secure, COOKIE_OPTIONS.HttpOnly)
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Refresh token expired"})
-		return
-	}
-
-	qrString, err := getQRCodeString(user["email"].(string))
-	if err != nil {
-		if user["role"] == "participant" {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "could not fetch qr string"})
-		} else {
-			return
-		}
-		return
-	}
-
-	// Issue a new access token if refresh token is valid
-	newAccessToken, err := generateJWT(user, JWT_SECRET)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not generate new access token"})
-		return
-	}
-
-	// Set new access token in cookie
-	c.SetCookie("access_token", newAccessToken, COOKIE_OPTIONS.MaxAge, "/", "", COOKIE_OPTIONS.Secure, COOKIE_OPTIONS.HttpOnly)
-
 	user["qr_string"] = qrString
-
 	c.JSON(http.StatusOK, gin.H{"loggedIn": true, "user": user})
 }
 
@@ -119,9 +113,11 @@ func generateJWT(user map[string]interface{}, secret string) (string, error) {
 }
 
 func getQRCodeString(email string) (string, error) {
+	db := db.InitialiseBucket().Scope("eventloop")
+
 	// Perform the database query to retrieve the participant and their QR string
 	query := "SELECT * FROM `participants` WHERE email = $1 LIMIT 1"
-	rows, err := db.InitialiseBucket().Scope("eventloop").Query(query, &gocb.QueryOptions{
+	rows, err := db.Query(query, &gocb.QueryOptions{
 		Adhoc:                true,
 		PositionalParameters: []interface{}{email},
 		Timeout:              15 * time.Second,
@@ -154,8 +150,7 @@ func getQRCodeString(email string) (string, error) {
 			}
 
 			// Store the base64-encoded QR string in the database
-			partCol := db.InitialiseBucket().Collection("participants")
-			_, err = partCol.Replace(user.Participant.ID, map[string]interface{}{
+			_, err = db.Collection("participants").Replace(user.Participant.ID, map[string]interface{}{
 				"qr_string": encodedString, // Store the base64-encoded QR code
 			}, &gocb.ReplaceOptions{
 				Timeout: 15 * time.Second,

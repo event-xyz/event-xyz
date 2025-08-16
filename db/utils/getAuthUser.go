@@ -2,7 +2,6 @@ package utils
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"time"
 
@@ -80,20 +79,8 @@ func GetAuthUser(name, email string) (*AuthUserResult, error) {
 	}
 
 	if rows.Next() {
-		encodedString, qrCodeBase64, err := GenerateQRCode(user.Participant.ID, os.Getenv("QR_SECRET_KEY"))
-		if err != nil {
-			return nil, err
-		}
-
-		partCol.Replace(user.Participant.ID, map[string]interface{}{
-			"qr_string": encodedString,
-		}, &gocb.ReplaceOptions{
-			Timeout: 15 * time.Second,
-		})
-
-		log.Printf("qr string: %v", encodedString)
 		if err := rows.Row(&user); err == nil {
-			return &AuthUserResult{Success: true, ID: user.Participant.ID, Name: user.Participant.Name, Email: user.Participant.Email, Role: user.Participant.Role, QR_string: qrCodeBase64}, nil
+			return &AuthUserResult{Success: true, ID: user.Participant.ID, Name: user.Participant.Name, Email: user.Participant.Email, Role: user.Participant.Role, QR_string: user.Participant.QR_string}, nil
 		}
 	}
 	// 3. Insert new participant
