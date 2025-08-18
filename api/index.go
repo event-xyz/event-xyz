@@ -2,6 +2,8 @@ package handler
 
 import (
 	"fmt"
+	"log"
+	"os"
 
 	"github.com/eventloop-testbed/backend/db"
 	"github.com/eventloop-testbed/backend/handlers"
@@ -12,19 +14,18 @@ import (
 	"github.com/eventloop-testbed/backend/handlers/qrscan"
 	"github.com/eventloop-testbed/backend/handlers/teams"
 	"github.com/eventloop-testbed/backend/middleware"
+	"github.com/joho/godotenv"
 
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 )
 
+const red = "\033[31m"
+
 var app *gin.Engine
 
 func apiRouter(r *gin.RouterGroup) {
-	r.GET("/health", func(ctx *gin.Context) {
-		ctx.String(http.StatusOK, "ping")
-	})
-
 	r.POST("/dbAuthorisedUsers/add", middleware.ValidateUserDetails(), dbAuthorisedUsers.AddUser)
 
 	r.POST("/teams/create", teams.AddTeam)
@@ -42,7 +43,6 @@ func apiRouter(r *gin.RouterGroup) {
 	r.POST("/forms/create", forms.SaveForm)
 	r.GET("/forms/", forms.GetAllForms)
 	r.GET("/forms/:docID", forms.GetForm)
-
 	r.PUT("/forms/:docID/edit", forms.UpdateForm)
 	r.OPTIONS("/forms/:docID/edit", forms.UpdateForm)
 
@@ -56,7 +56,12 @@ func apiRouter(r *gin.RouterGroup) {
 func Main() {
 	app = gin.New()
 	r := app.Group("/")
-	r.Use(handlers.CorsMiddleware())
+	r.Use(middleware.CorsMiddleware())
+
+	// Prevents use of `SetUser` middleware on these routes
+	r.GET("/", func(ctx *gin.Context) {
+		ctx.String(http.StatusOK, "ping OK, server running...")
+	})
 
 	r.POST("/login", handlers.Login)
 	r.OPTIONS("/login", handlers.Login)
@@ -65,7 +70,7 @@ func Main() {
 
 	bucket := db.InitialiseBucket().Scope("eventloop")
 	if bucket == nil {
-		panic("Failed to initialise bucket")
+		log.Fatalf(red + "Failed to initialise bucket")
 	} else {
 		fmt.Printf("Bucket '%s' initialised\n", bucket.Name())
 	}
@@ -73,7 +78,43 @@ func Main() {
 	apiRouter(r)
 }
 
+// This function will check whether all env variables are defined.
+// If any one of them is missing, it will throw an appropriate error and exit
+func checkEnvVars() {
+	requiredEnvVars := []string{
+		"PRODUCTION",
+		"DB_CONNECTION_STRING",
+		"DB_USERNAME",
+		"DB_PASSWORD",
+		"DB_BUCKET_NAME",
+		"JWT_SECRET",
+		"REFRESH_JWT_SECRET",
+		"QR_SECRET_KEY",
+		"GOOGLE_CLIENT_ID",
+		"FRONTEND_ENDPOINT",
+	}
+
+	_, err := os.Stat(".env")
+	if err == nil {
+		err := godotenv.Load()
+		if err != nil {
+			log.Printf("Error loading .env file")
+		}
+	}
+
+	for _, envVar := range requiredEnvVars {
+		value, exists := os.LookupEnv(envVar)
+		if !exists || value == "" {
+			log.Fatalf(red+"ERROR: Environment variable '%s' is missing.", envVar)
+		}
+	}
+
+	fmt.Println("Starting server...")
+}
+
 func Handler(w http.ResponseWriter, r *http.Request) {
+	checkEnvVars()
+
 	if app == nil {
 		Main()
 	}
